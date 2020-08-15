@@ -37,9 +37,9 @@
 			[
 				{
 					"directoryIndex" : 0,
-					"id" : "SP::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-SP-Debug-23419272e92f285ecee8.json",
-					"name" : "SP",
+					"id" : "SuperPoint::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SuperPoint-Debug-006d9168b05f920ce928.json",
+					"name" : "SuperPoint",
 					"projectIndex" : 0
 				}
 			]

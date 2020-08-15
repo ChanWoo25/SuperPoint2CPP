@@ -4,9 +4,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/leecw/Reps/SuperPoint2CPP/main.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SP.dir/main.cpp.o"
-  "/home/leecw/Reps/SuperPoint2CPP/src/Extractor.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SP.dir/src/Extractor.cpp.o"
-  "/home/leecw/Reps/SuperPoint2CPP/src/SuperPoint.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SP.dir/src/SuperPoint.cpp.o"
+  "/home/leecw/Reps/SuperPoint2CPP/main.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SuperPoint.dir/main.cpp.o"
+  "/home/leecw/Reps/SuperPoint2CPP/src/Extractor.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SuperPoint.dir/src/Extractor.cpp.o"
+  "/home/leecw/Reps/SuperPoint2CPP/src/SuperPoint.cpp" "/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles/SuperPoint.dir/src/SuperPoint.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

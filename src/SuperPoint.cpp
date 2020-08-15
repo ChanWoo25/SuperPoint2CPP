@@ -5,8 +5,8 @@ namespace SUPERPOINT
 using namespace torch;
 using namespace nn;
 
-SuperPoint::SuperPoint()
-      : conv1a(Conv2dOptions( 1, c1, 3).stride(1).padding(1)),
+SuperPoint::SuperPoint()    //C++에서 Conv2d 사용용법.              
+      : conv1a(Conv2dOptions( 1, c1, 3).stride(1).padding(1)), 
         conv1b(Conv2dOptions(c1, c1, 3).stride(1).padding(1)),
 
         conv2a(Conv2dOptions(c1, c2, 3).stride(1).padding(1)),
@@ -24,7 +24,7 @@ SuperPoint::SuperPoint()
         convDa(Conv2dOptions(c4, c5, 3).stride(1).padding(1)),
         convDb(Conv2dOptions(c5, d1, 1).stride(1).padding(0))
         
-  {
+  { // Class Module에 등록 
     register_module("conv1a", conv1a);
     register_module("conv1b", conv1b);
 
@@ -45,33 +45,36 @@ SuperPoint::SuperPoint()
   }
 
 
-std::vector<torch::Tensor> SuperPoint::forward(torch::Tensor x) {
+std::vector<Tensor> SuperPoint::forward(Tensor input) {
+    
+    //SHARED ENCODER
+    auto x = relu(conv1a->forward(input));
+    x = relu(conv1b->forward(x));
+    x = max_pool2d(x, 2, 2);
 
-    x = torch::relu(conv1a->forward(x));
-    x = torch::relu(conv1b->forward(x));
-    x = torch::max_pool2d(x, 2, 2);
+    x = relu(conv2a->forward(x));
+    x = relu(conv2b->forward(x));
+    x = max_pool2d(x, 2, 2);
 
-    x = torch::relu(conv2a->forward(x));
-    x = torch::relu(conv2b->forward(x));
-    x = torch::max_pool2d(x, 2, 2);
+    x = relu(conv3a->forward(x));
+    x = relu(conv3b->forward(x));
+    x = max_pool2d(x, 2, 2);
 
-    x = torch::relu(conv3a->forward(x));
-    x = torch::relu(conv3b->forward(x));
-    x = torch::max_pool2d(x, 2, 2);
+    x = relu(conv4a->forward(x));
+    x = relu(conv4b->forward(x));
 
-    x = torch::relu(conv4a->forward(x));
-    x = torch::relu(conv4b->forward(x));
-
-    auto cPa = torch::relu(convPa->forward(x));
+    //DETECTOR
+    auto cPa = relu(convPa->forward(x));
     auto semi = convPb->forward(cPa);  // [B, 65, H/8, W/8]
+    
+    //DESCRIPTOR
+    auto cDa = relu(convDa->forward(x));
+    auto desc = convDb->forward(cDa);  // [B, 256, H/8, W/8]
 
-    auto cDa = torch::relu(convDa->forward(x));
-    auto desc = convDb->forward(cDa);  // [B, d1, H/8, W/8]
+    auto dn = norm(desc, 2, 1);
+    desc = desc.div(unsqueeze(dn, 1));
 
-    auto dn = torch::norm(desc, 2, 1);
-    desc = desc.div(torch::unsqueeze(dn, 1));
-
-    semi = torch::softmax(semi, 1);
+    semi = softmax(semi, 1);
     semi = semi.slice(1, 0, 64);
     semi = semi.permute({0, 2, 3, 1});  // [B, H/8, W/8, 64]
 
@@ -83,7 +86,7 @@ std::vector<torch::Tensor> SuperPoint::forward(torch::Tensor x) {
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8});  // [B, H, W]
 
 
-    std::vector<torch::Tensor> ret;
+    std::vector<Tensor> ret;
     ret.push_back(semi);
     ret.push_back(desc);
 
@@ -97,16 +100,17 @@ void NMS2(std::vector<cv::KeyPoint> det, cv::Mat conf, std::vector<cv::KeyPoint>
 
 cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms, bool cuda)
 {
-    auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, torch::kByte);
-    x = x.to(torch::kFloat) / 255;
+    auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, kByte);
+    x = x.to(kFloat) / 255;
 
     bool use_cuda = cuda && torch::cuda::is_available();
-    torch::DeviceType device_type;
-    if (use_cuda)
-        device_type = torch::kCUDA;
-    else
-        device_type = torch::kCPU;
-    torch::Device device(device_type);
+    DeviceType device_type;
+    device_type = (use_cuda) ? kCUDA : kCPU;
+    // if (use_cuda)
+    //     device_type = kCUDA;
+    // else
+    //     device_type = kCPU;
+    Device device(device_type);
 
     model->to(device);
     x = x.set_requires_grad(false);
@@ -116,23 +120,23 @@ cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv:
 
     auto kpts = (prob > threshold);
 
-    kpts = torch::nonzero(kpts);  // [n_keypoints, 2]  (y, x)
-    auto fkpts = kpts.to(torch::kFloat);
+    kpts = nonzero(kpts);  // [n_keypoints, 2]  (y, x)
+    auto fkpts = kpts.to(kFloat);
     auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);  // [1, 1, n_keypoints, 2]
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / prob.size(1) - 1;  // x
     grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / prob.size(0) - 1;  // y
 
-    desc = torch::grid_sampler(desc, grid, 0, 0, false);  // [1, 256, 1, n_keypoints]       //CHANGED
+    desc = grid_sampler(desc, grid, 0, 0, false);  // [1, 256, 1, n_keypoints]       //CHANGED
     desc = desc.squeeze(0).squeeze(1);  // [256, n_keypoints]
 
     // normalize to 1
-    auto dn = torch::norm(desc, 2, 1);
-    desc = desc.div(torch::unsqueeze(dn, 1));
+    auto dn = norm(desc, 2, 1);
+    desc = desc.div(unsqueeze(dn, 1));
 
     desc = desc.transpose(0, 1).contiguous();  // [n_keypoints, 256]
 
     if (use_cuda)
-        desc = desc.to(torch::kCPU);
+        desc = desc.to(kCPU);
 
     cv::Mat descriptors_no_nms(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data<float>());
     
@@ -181,16 +185,16 @@ SPDetector::SPDetector(std::shared_ptr<SuperPoint> _model) : model(_model)
 
 void SPDetector::detect(cv::Mat &img, bool cuda)
 {
-    auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, torch::kByte);
-    x = x.to(torch::kFloat) / 255;
+    auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, kByte);
+    x = x.to(kFloat) / 255;
 
     bool use_cuda = cuda && torch::cuda::is_available();
-    torch::DeviceType device_type;
+    DeviceType device_type;
     if (use_cuda)
-        device_type = torch::kCUDA;
+        device_type = kCUDA;
     else
-        device_type = torch::kCPU;
-    torch::Device device(device_type);
+        device_type = kCPU;
+    Device device(device_type);
 
     model->to(device);
     x = x.set_requires_grad(false);
@@ -206,7 +210,7 @@ void SPDetector::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int
 {
     auto prob = mProb.slice(0, iniY, maxY).slice(1, iniX, maxX);  // [h, w]
     auto kpts = (prob > threshold);
-    kpts = torch::nonzero(kpts);  // [n_keypoints, 2]  (y, x)
+    kpts = nonzero(kpts);  // [n_keypoints, 2]  (y, x)
 
     std::vector<cv::KeyPoint> keypoints_no_nms;
     for (int i = 0; i < kpts.size(0); i++) {
@@ -246,21 +250,21 @@ void SPDetector::computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, 
         kpt_mat.at<float>(i, 1) = (float)keypoints[i].pt.x;
     }
 
-    auto fkpts = torch::from_blob(kpt_mat.data, {(long long)keypoints.size(), 2}, torch::kFloat);       //CHANGED (long long)
+    auto fkpts = torch::from_blob(kpt_mat.data, {(long long)keypoints.size(), 2}, kFloat);       //CHANGED (long long)
 
     auto grid = torch::zeros({1, 1, fkpts.size(0), 2});  // [1, 1, n_keypoints, 2]
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / mProb.size(1) - 1;  // x
     grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / mProb.size(0) - 1;  // y
 
-    auto desc = torch::grid_sampler(mDesc, grid, 0, 0, false);  // [1, 256, 1, n_keypoints]         //CHANGED ,false
+    auto desc = grid_sampler(mDesc, grid, 0, 0, false);  // [1, 256, 1, n_keypoints]         //CHANGED ,false
     desc = desc.squeeze(0).squeeze(1);  // [256, n_keypoints]
 
     // normalize to 1
-    auto dn = torch::norm(desc, 2, 1);
-    desc = desc.div(torch::unsqueeze(dn, 1));
+    auto dn = norm(desc, 2, 1);
+    desc = desc.div(unsqueeze(dn, 1));
 
     desc = desc.transpose(0, 1).contiguous();  // [n_keypoints, 256]
-    desc = desc.to(torch::kCPU);
+    desc = desc.to(kCPU);
 
     cv::Mat desc_mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data<float>());
 

@@ -15,8 +15,8 @@ ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
 )
 
-add_executable(SP main.cpp src/SuperPoint.cpp)
-target_link_libraries(SP PUBLIC 
+add_executable(SuperPoint main.cpp src/SuperPoint.cpp src/Extractor.cpp)
+target_link_libraries(SuperPoint PUBLIC 
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}
 )

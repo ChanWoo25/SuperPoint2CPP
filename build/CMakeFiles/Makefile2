@@ -72,7 +72,7 @@ CMAKE_BINARY_DIR = /home/leecw/Reps/SuperPoint2CPP/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/SP.dir/all
+all: CMakeFiles/SuperPoint.dir/all
 
 .PHONY : all
 
@@ -82,36 +82,36 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/SP.dir/clean
+clean: CMakeFiles/SuperPoint.dir/clean
 
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/SP.dir
+# Target rules for target CMakeFiles/SuperPoint.dir
 
 # All Build rule for target.
-CMakeFiles/SP.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles --progress-num=1,2,3 "Built target SP"
-.PHONY : CMakeFiles/SP.dir/all
+CMakeFiles/SuperPoint.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles --progress-num=1,2,3,4 "Built target SuperPoint"
+.PHONY : CMakeFiles/SuperPoint.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/SP.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles 3
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/SP.dir/all
+CMakeFiles/SuperPoint.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles 4
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/SuperPoint.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/leecw/Reps/SuperPoint2CPP/build/CMakeFiles 0
-.PHONY : CMakeFiles/SP.dir/rule
+.PHONY : CMakeFiles/SuperPoint.dir/rule
 
 # Convenience name for target.
-SP: CMakeFiles/SP.dir/rule
+SuperPoint: CMakeFiles/SuperPoint.dir/rule
 
-.PHONY : SP
+.PHONY : SuperPoint
 
 # clean rule for target.
-CMakeFiles/SP.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/clean
-.PHONY : CMakeFiles/SP.dir/clean
+CMakeFiles/SuperPoint.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/clean
+.PHONY : CMakeFiles/SuperPoint.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

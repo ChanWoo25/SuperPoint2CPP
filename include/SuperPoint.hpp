@@ -16,11 +16,15 @@ namespace SUPERPOINT
 using namespace torch;
 using namespace nn;
 
-struct SuperPoint : Module {
+class SuperPoint : public Module {
+// class를 쓰면, 권한을 지정해야한다. 상속시 public Module을 바꿨고,
+// 멤버함수, 변수들도 public, private지정을 안해주면 모두 private처리가 되기 때문에 forward에 접할 수 없게된다.
+public:
   SuperPoint(); //생성자
 
-  std::vector<torch::Tensor> forward(Tensor x);
+  std::vector<torch::Tensor> forward(Tensor input); //순전파
 
+private:
   //SHARED ENCODER
   Conv2d conv1a;
   Conv2d conv1b;

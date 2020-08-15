@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "SP"
+			"path" : "SuperPoint"
 		}
 	],
 	"backtrace" : 1,
@@ -95,11 +95,12 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1
+				1,
+				2
 			]
 		}
 	],
-	"id" : "SP::@6890427a1f51a3e7e1df",
+	"id" : "SuperPoint::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -434,8 +435,8 @@
 		],
 		"language" : "CXX"
 	},
-	"name" : "SP",
-	"nameOnDisk" : "SP",
+	"name" : "SuperPoint",
+	"nameOnDisk" : "SuperPoint",
 	"paths" : 
 	{
 		"build" : ".",
@@ -448,7 +449,8 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1
+				1,
+				2
 			]
 		}
 	],
@@ -464,6 +466,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "src/SuperPoint.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/Extractor.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

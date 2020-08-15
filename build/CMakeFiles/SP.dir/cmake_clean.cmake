@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/SP.dir/main.cpp.o"
+  "CMakeFiles/SP.dir/src/Extractor.cpp.o"
   "CMakeFiles/SP.dir/src/SuperPoint.cpp.o"
   "SP"
   "SP.pdb"

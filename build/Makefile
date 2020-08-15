@@ -75,17 +75,6 @@ CMAKE_BINARY_DIR = /home/leecw/Reps/SuperPoint2CPP/build
 #=============================================================================
 # Targets provided globally by CMake.
 
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/local/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
-
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
-
-.PHONY : rebuild_cache/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
@@ -96,6 +85,17 @@ edit_cache:
 edit_cache/fast: edit_cache
 
 .PHONY : edit_cache/fast
+
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/usr/local/bin/cmake --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -130,17 +130,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named SP
+# Target rules for targets named SuperPoint
 
 # Build rule for target.
-SP: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 SP
-.PHONY : SP
+SuperPoint: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 SuperPoint
+.PHONY : SuperPoint
 
 # fast build rule for target.
-SP/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/build
-.PHONY : SP/fast
+SuperPoint/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/build
+.PHONY : SuperPoint/fast
 
 main.o: main.cpp.o
 
@@ -148,7 +148,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -157,7 +157,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -166,8 +166,35 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/main.cpp.s
 .PHONY : main.cpp.s
+
+src/Extractor.o: src/Extractor.cpp.o
+
+.PHONY : src/Extractor.o
+
+# target to build an object file
+src/Extractor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/Extractor.cpp.o
+.PHONY : src/Extractor.cpp.o
+
+src/Extractor.i: src/Extractor.cpp.i
+
+.PHONY : src/Extractor.i
+
+# target to preprocess a source file
+src/Extractor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/Extractor.cpp.i
+.PHONY : src/Extractor.cpp.i
+
+src/Extractor.s: src/Extractor.cpp.s
+
+.PHONY : src/Extractor.s
+
+# target to generate assembly for a file
+src/Extractor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/Extractor.cpp.s
+.PHONY : src/Extractor.cpp.s
 
 src/SuperPoint.o: src/SuperPoint.cpp.o
 
@@ -175,7 +202,7 @@ src/SuperPoint.o: src/SuperPoint.cpp.o
 
 # target to build an object file
 src/SuperPoint.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/src/SuperPoint.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/SuperPoint.cpp.o
 .PHONY : src/SuperPoint.cpp.o
 
 src/SuperPoint.i: src/SuperPoint.cpp.i
@@ -184,7 +211,7 @@ src/SuperPoint.i: src/SuperPoint.cpp.i
 
 # target to preprocess a source file
 src/SuperPoint.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/src/SuperPoint.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/SuperPoint.cpp.i
 .PHONY : src/SuperPoint.cpp.i
 
 src/SuperPoint.s: src/SuperPoint.cpp.s
@@ -193,7 +220,7 @@ src/SuperPoint.s: src/SuperPoint.cpp.s
 
 # target to generate assembly for a file
 src/SuperPoint.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/SP.dir/build.make CMakeFiles/SP.dir/src/SuperPoint.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/SuperPoint.dir/build.make CMakeFiles/SuperPoint.dir/src/SuperPoint.cpp.s
 .PHONY : src/SuperPoint.cpp.s
 
 # Help Target
@@ -204,10 +231,13 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... SP"
+	@echo "... SuperPoint"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... src/Extractor.o"
+	@echo "... src/Extractor.i"
+	@echo "... src/Extractor.s"
 	@echo "... src/SuperPoint.o"
 	@echo "... src/SuperPoint.i"
 	@echo "... src/SuperPoint.s"
