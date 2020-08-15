@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/leecw/Reps/SuperPoint2CPP/build",
+  "command": "/usr/bin/g++-5  -I/home/leecw/Reps/SuperPoint2CPP -I/home/leecw/Reps/SuperPoint2CPP/include -isystem /home/leecw/libtorch/include -isystem /home/leecw/libtorch/include/torch/csrc/api/include -isystem /usr/local/cuda-10.2/include -isystem /usr/local/include/opencv -g -D_GLIBCXX_USE_CXX11_ABI=1 -std=c++14 -o CMakeFiles/SP.dir/main.cpp.o -c /home/leecw/Reps/SuperPoint2CPP/main.cpp",
+  "file": "/home/leecw/Reps/SuperPoint2CPP/main.cpp"
+},
+{
+  "directory": "/home/leecw/Reps/SuperPoint2CPP/build",
+  "command": "/usr/bin/g++-5  -I/home/leecw/Reps/SuperPoint2CPP -I/home/leecw/Reps/SuperPoint2CPP/include -isystem /home/leecw/libtorch/include -isystem /home/leecw/libtorch/include/torch/csrc/api/include -isystem /usr/local/cuda-10.2/include -isystem /usr/local/include/opencv -g -D_GLIBCXX_USE_CXX11_ABI=1 -std=c++14 -o CMakeFiles/SP.dir/src/SuperPoint.cpp.o -c /home/leecw/Reps/SuperPoint2CPP/src/SuperPoint.cpp",
+  "file": "/home/leecw/Reps/SuperPoint2CPP/src/SuperPoint.cpp"
+}
+]
