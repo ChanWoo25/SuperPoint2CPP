@@ -2,6 +2,7 @@
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.associations": {
         "vector": "cpp",
-        "cstddef": "cpp"
+        "cstddef": "cpp",
+        "ostream": "cpp"
     }
 }

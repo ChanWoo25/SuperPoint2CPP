@@ -43,9 +43,13 @@ public:
 
     void DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNode &n3, ExtractorNode &n4);
 
+    // 
     std::vector<cv::KeyPoint> vKeys;
+    // UpLeft, UpRight, BottomLeft, BottomRight
     cv::Point2i UL, UR, BL, BR;
+    // Iterator for 
     std::list<ExtractorNode>::iterator lit;
+    // Recursive end flag.
     bool bNoMore;
 };
 

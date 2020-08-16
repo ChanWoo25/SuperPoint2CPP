@@ -1,4 +1,4 @@
-#include "SuperPoint.hpp"
+#include <SuperPoint.hpp>
 
 namespace SUPERPOINT
 {
@@ -98,12 +98,12 @@ void NMS(cv::Mat det, cv::Mat conf, cv::Mat desc, std::vector<cv::KeyPoint>& pts
 void NMS2(std::vector<cv::KeyPoint> det, cv::Mat conf, std::vector<cv::KeyPoint>& pts,
             int border, int dist_thresh, int img_width, int img_height);
 
-cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms, bool cuda)
+cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms)
 {
     auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, kByte);
     x = x.to(kFloat) / 255;
 
-    bool use_cuda = cuda && torch::cuda::is_available();
+    bool use_cuda = torch::cuda::is_available();
     DeviceType device_type;
     device_type = (use_cuda) ? kCUDA : kCPU;
     // if (use_cuda)
@@ -135,10 +135,12 @@ cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv:
 
     desc = desc.transpose(0, 1).contiguous();  // [n_keypoints, 256]
 
+
+    // After processing, back to CPU only descriptor
     if (use_cuda)
         desc = desc.to(kCPU);
 
-    cv::Mat descriptors_no_nms(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data<float>());
+    cv::Mat descriptors_no_nms(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
     
     std::vector<cv::KeyPoint> keypoints_no_nms;
     for (int i = 0; i < kpts.size(0); i++) {
@@ -183,12 +185,12 @@ SPDetector::SPDetector(std::shared_ptr<SuperPoint> _model) : model(_model)
 {
 }
 
-void SPDetector::detect(cv::Mat &img, bool cuda)
+void SPDetector::detect(cv::Mat &img)
 {
     auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, kByte);
     x = x.to(kFloat) / 255;
 
-    bool use_cuda = cuda && torch::cuda::is_available();
+    bool use_cuda = torch::cuda::is_available();
     DeviceType device_type;
     if (use_cuda)
         device_type = kCUDA;
@@ -266,7 +268,7 @@ void SPDetector::computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, 
     desc = desc.transpose(0, 1).contiguous();  // [n_keypoints, 256]
     desc = desc.to(kCPU);
 
-    cv::Mat desc_mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data<float>());
+    cv::Mat desc_mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
 
     descriptors = desc_mat.clone();
 }

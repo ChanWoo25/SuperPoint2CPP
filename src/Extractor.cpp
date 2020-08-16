@@ -74,7 +74,7 @@ const int HALF_PATCH_SIZE = 15;
 const int EDGE_THRESHOLD = 19;
 
 
-const float factorPI = (float)(CV_PI/180.f);
+const float factorPI = (float)(CV_PI/180.f); // 3.14~ / 180도
 
 void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNode &n3, ExtractorNode &n4)
 {
@@ -82,6 +82,13 @@ void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNo
     const int halfY = ceil(static_cast<float>(BR.y-UL.y)/2);
 
     //Define boundaries of childs
+    /*
+    ____________
+    | n1 | n2 |
+    |____|____|
+    | n3 | n4 |
+    |____|____|
+    */
     n1.UL = UL;
     n1.UR = cv::Point2i(UL.x+halfX,UL.y);
     n1.BL = cv::Point2i(UL.x,UL.y+halfY);
@@ -418,7 +425,7 @@ void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoint
     for (int level = 0; level < nlevels; ++level)
     {
         SPDetector detector(model);
-        detector.detect(mvImagePyramid[level], false);
+        detector.detect(mvImagePyramid[level]);
 
         const int minBorderX = EDGE_THRESHOLD-3;
         const int minBorderY = minBorderX;

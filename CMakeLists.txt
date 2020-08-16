@@ -9,14 +9,29 @@ if(OpenCV_FOUND)
    message(STATUS "OpenCV >= 3.0 found.")
 endif()
 
+message(STATUS ${PROJECT_SOURCE_DIR})
+message(STATUS ${CMAKE_SOURCE_DIR})
+#message(STATUS ${TORCH_LIBRARIES})
 
-include_directories(
-${PROJECT_SOURCE_DIR}
-${PROJECT_SOURCE_DIR}/include
+# TEST
+add_executable(test test.cpp )
+target_include_directories(test
+PUBLIC 
+   ${PROJECT_SOURCE_DIR}/include
+)
+target_link_libraries(test 
+${TORCH_LIBRARIES}
+${OpenCV_LIBS}
 )
 
-add_executable(SuperPoint main.cpp src/SuperPoint.cpp src/Extractor.cpp)
-target_link_libraries(SuperPoint PUBLIC 
+
+# SUPERPOINT
+add_executable(SuperPoint main.cpp ./src/SuperPoint.cpp ./src/Extractor.cpp)
+target_include_directories(SuperPoint
+PUBLIC 
+   ${PROJECT_SOURCE_DIR}/include
+)
+target_link_libraries(SuperPoint 
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}
 )

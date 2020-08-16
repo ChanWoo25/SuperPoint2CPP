@@ -6,11 +6,6 @@
 
 #include <vector>
 
-#ifdef EIGEN_MPL2_ONLY
-#undef EIGEN_MPL2_ONLY
-#endif
-
-
 namespace SUPERPOINT
 {
 using namespace torch;
@@ -55,13 +50,13 @@ private:
 };
 
 
-cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms, bool cuda);
+cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
 // torch::Tensor NMS(torch::Tensor kpts);
 
 class SPDetector {
 public:
     SPDetector(std::shared_ptr<SuperPoint> _model);
-    void detect(cv::Mat &image, bool cuda);
+    void detect(cv::Mat &image);
     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
     void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
 
