@@ -1,9 +1,10 @@
 #include <SuperPoint.hpp>
-
+#include <iostream>
 namespace SUPERPOINT
 {
 using namespace torch;
 using namespace nn;
+bool Explain = true;
 
 SuperPoint::SuperPoint()    //C++에서 Conv2d 사용용법.              
       : conv1a(Conv2dOptions( 1, c1, 3).stride(1).padding(1)), 
@@ -71,19 +72,29 @@ std::vector<Tensor> SuperPoint::forward(Tensor input) {
     auto cDa = relu(convDa->forward(x));
     auto desc = convDb->forward(cDa);  // [B, 256, H/8, W/8]
 
+    if(Explain) desc.print();
     auto dn = norm(desc, 2, 1);
+    if(Explain) dn.print();
     desc = desc.div(unsqueeze(dn, 1));
+    if(Explain) desc.print();
 
+    if(Explain) semi.print();
     semi = softmax(semi, 1);
+    if(Explain) semi.print();
     semi = semi.slice(1, 0, 64);
+    if(Explain) semi.print();
     semi = semi.permute({0, 2, 3, 1});  // [B, H/8, W/8, 64]
+    if(Explain) semi.print();
 
 
     int Hc = semi.size(1);
     int Wc = semi.size(2);
     semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
+    if(Explain) semi.print();
     semi = semi.permute({0, 1, 3, 2, 4});
+    if(Explain) semi.print();
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8});  // [B, H, W]
+    if(Explain) semi.print();
 
 
     std::vector<Tensor> ret;
@@ -106,6 +117,7 @@ cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv:
     bool use_cuda = torch::cuda::is_available();
     DeviceType device_type;
     device_type = (use_cuda) ? kCUDA : kCPU;
+    std::cout << "Device type is " << (use_cuda ? "Cuda!" : "CPU!") << std::endl;
     // if (use_cuda)
     //     device_type = kCUDA;
     // else
@@ -117,9 +129,11 @@ cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv:
     auto out = model->forward(x.to(device));
     auto prob = out[0].squeeze(0);  // [H, W]
     auto desc = out[1];             // [1, 256, H/8, W/8]
-
+    
+    // Keypoints.
     auto kpts = (prob > threshold);
 
+    // Nonzero인 좌표를 Tensor로 저장.
     kpts = nonzero(kpts);  // [n_keypoints, 2]  (y, x)
     auto fkpts = kpts.to(kFloat);
     auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);  // [1, 1, n_keypoints, 2]
@@ -129,10 +143,12 @@ cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv:
     desc = grid_sampler(desc, grid, 0, 0, false);  // [1, 256, 1, n_keypoints]       //CHANGED
     desc = desc.squeeze(0).squeeze(1);  // [256, n_keypoints]
 
-    // normalize to 1
+    // normalize to 1 with 2-Norm.
+    // 각 키포인트에 대해서 Normalize.
     auto dn = norm(desc, 2, 1);
     desc = desc.div(unsqueeze(dn, 1));
 
+    if(Explain) desc.print();
     desc = desc.transpose(0, 1).contiguous();  // [n_keypoints, 256]
 
 
@@ -222,6 +238,8 @@ void SPDetector::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int
 
     if (nms) {
         cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);
+        std::cout << "SPDetector::getKeyPoints : conf's size: " << conf.size() << std::endl;
+
         for (size_t i = 0; i < keypoints_no_nms.size(); i++) {
             int x = keypoints_no_nms[i].pt.x;
             int y = keypoints_no_nms[i].pt.y;
@@ -235,6 +253,7 @@ void SPDetector::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int
         int height = maxY - iniY;
         int width = maxX - iniX;
 
+        // Keypoints의 좌표를 담은 [n, 2] 벡터와 Confidence를 담은 [n, 1] 벡터.
         NMS2(keypoints_no_nms, conf, keypoints, border, dist_thresh, width, height);
     }
     else {
