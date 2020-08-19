@@ -18,4 +18,10 @@ int main()
     tensor.print();
 
 
+    printSection(2, "Module pretty print");
+    auto net = std::make_shared<SuperPoint>();
+    std::cout << net->name() << std::endl;
+    net->pretty_print(std::cout);
+    // Model.pretty_print(std::cout);
+
 }
