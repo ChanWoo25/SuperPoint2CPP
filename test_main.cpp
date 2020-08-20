@@ -7,71 +7,59 @@
 #include "test.hpp"
 
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
+const std::string weight_dir = project_dir + "Weights/superpoint.pt";
 
 int main(const int argc, const char* argv[])
 {
     using namespace NAMU_TEST;
-    NAMU_TEST::Explain = true;
 
-    // std::cout << *typeid(float(CV_PI)).name() << std::endl;
-    // Output : f
-
-    std::cout << "argc : " << argc << std::endl;
-    for(int i=0 ;i<argc; i++){
-        std::cout << argv[i] << std::endl;
-    }
     /*************************************************************/
-    printSection(1, "Cuda availablility.");
+    printSection(1, "Cuda availablility. [DONE]");
     bool use_cuda = torch::cuda::is_available();
     //display();
 
     /*************************************************************/
-    printSection(2, "Module Information.");
-    
+    printSection(2, "Module Information. [DONE]");
     //display(net);
 
-    
+    /*************************************************************/
+    printSection(3, "Load Weight. [DONE]");
 
     /*************************************************************/
-    printSection(3, "Load");
-    DeviceType device_type;
-    device_type = (use_cuda) ? kCUDA : kCPU;
-    std::cout << "Device type is " << device_type << std::endl;
-    Device device(device_type);
+    printSection(3, "Understand Forward procedure. [DONE]");
 
-    std::shared_ptr<SuperPoint> model;
-    model = std::make_shared<SuperPoint>();
-    std::cout << "model constructor.\n";
+    auto tensor_options = torch::TensorOptions()
+                            .dtype(torch::kFloat32)
+                            .layout(torch::kStrided)
+                            .device(c10::DeviceType(torch::kCUDA))
+                            .requires_grad(false);
 
-    load(model, project_dir + "Weights/superpoint.pt");
-    model->to(device);
+ 
 
+    cv::Mat key(5 , 2, CV_32FC1, 1);
+    cv::Mat val(5 , 1, CV_32FC1, 2);
 
-    auto TsOpt = torch::TensorOptions()
-                .dtype(torch::kFloat32)
-                .layout(torch::kStrided)
-                .device(device)
-                .requires_grad(false);
+    std::cout << key << std::endl;
+    std::cout << val << std::endl;
 
-    Tensor input = torch::rand({1, 1, 64,64}, TsOpt) * 256;
-    //std::cout << input << std::endl;
-    
-    auto output = model->forward(input);
+    auto xy = key.ptr<float>(0);
+    auto val_ptr = val.ptr<float>(0);
 
-    if(use_cuda)
-        model->to(torch::kCPU);
+    for (size_t i = 0; i < 5; i++)
+    {
+        //auto xy = key.ptr<float>(i);
+        int x = *(xy++) = float(i * 2 + 0);
+        int y = *(xy++) = float(i * 2 + 1);
+        *(val_ptr++) = float(x * 10 + y);
+    }
+    std::cout << key << std::endl;
+    std::cout << val << std::endl;
 
-    std::cout << "size is " << output.size() << std::endl;
-    output[0].print();
-    // auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, torch::kByte);
-
-    // cv::namedWindow("SuperPoint Tracker");
-    // auto font = cv::FONT_HERSHEY_DUPLEX;
-
-    // bool saving = true;
-    // if(saving)
-    // {
-    //     string saving_dir = "/home/leecw/Reps/SuperPoint2CPP";  
-    // }
-    // string kDataRoot = "./data";
 }
+
+
+    // std::shared_ptr<SuperPoint> model;
+    // model = std::make_shared<SuperPoint>();
+    // std::cout << "model constructor.\n";
+    // load(model, project_dir + "Weights/superpoint.pt");
+    //  model->to(device);

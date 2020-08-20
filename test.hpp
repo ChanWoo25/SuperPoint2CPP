@@ -14,7 +14,6 @@ namespace NAMU_TEST
 
 using namespace torch;
 using namespace nn;
-bool Explain;
 
 void printSection(int n, std::string s);
 
@@ -62,6 +61,7 @@ protected:
     const int c4 = 128;
     const int c5 = 256;
     const int d1 = 256;
+    bool verbose = 0;
 };
 
 class SuperPointFrontend
@@ -70,6 +70,7 @@ public:
     SuperPointFrontend();
     SuperPointFrontend(std::string _weight_dir, bool _use_cuda);
     cv::Mat detect(cv::Mat &img);
+    
     void NMS(cv::Mat det, cv::Mat conf, cv::Mat desc, std::vector<cv::KeyPoint>& pts, cv::Mat& descriptors,
         int border, int dist_thresh, int img_width, int img_height);
     void NMS2(std::vector<cv::KeyPoint> det, cv::Mat conf, std::vector<cv::KeyPoint>& pts,
@@ -88,6 +89,7 @@ private:
     float nn_thres;
     int output_cell = 8;
     int range_border = 4;
+    bool verbose = 0;
 };
 
 cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);

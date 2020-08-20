@@ -58,6 +58,8 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "__nullptr": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "__bit_reference": "cpp",
+        "memory_resource": "cpp"
     }
 }

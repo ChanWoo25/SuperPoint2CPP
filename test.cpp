@@ -79,37 +79,37 @@ namespace NAMU_TEST
         auto cDa = relu(convDa->forward(x));
         auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
 
-        if (Explain)
+        if (verbose)
             desc.print();
         auto dn = norm(desc, 2, 1);
-        if (Explain)
+        if (verbose)
             dn.print();
         desc = desc.div(unsqueeze(dn, 1));
-        if (Explain)
+        if (verbose)
             desc.print();
 
-        if (Explain)
+        if (verbose)
             semi.print();
         semi = softmax(semi, 1);
-        if (Explain)
+        if (verbose)
             semi.print();
         semi = semi.slice(1, 0, 64);
-        if (Explain)
+        if (verbose)
             semi.print();
         semi = semi.permute({0, 2, 3, 1}); // [B, H/8, W/8, 64]
-        if (Explain)
+        if (verbose)
             semi.print();
 
         int Hc = semi.size(1);
         int Wc = semi.size(2);
         semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
-        if (Explain)
+        if (verbose)
             semi.print();
         semi = semi.permute({0, 1, 3, 2, 4});
-        if (Explain)
+        if (verbose)
             semi.print();
         semi = semi.contiguous().view({-1, Hc * 8, Wc * 8}); // [B, H, W]
-        if (Explain)
+        if (verbose)
             semi.print();
 
         std::vector<Tensor> ret;
@@ -182,7 +182,11 @@ namespace NAMU_TEST
         auto desc = mDesc = out[1];            // [1, 256, H/8, W/8]
 
         // Nonzero인 좌표를 Tensor로 저장.
+        // [H, W]에서 Threshold 이상인 픽셀은 1, otherise 0.
         auto kpts = (prob > conf_thres);
+        
+        //  at::nonzero(at::Tensor input)
+        //      return the coordinates of nonzero value pixels of 'input' Tensor.
         kpts = at::nonzero(kpts); // [n_keypoints, 2]  (y, x)
 
         std::cout << "kpyts' type is ";
@@ -190,14 +194,26 @@ namespace NAMU_TEST
         std::cout << std::endl;
         auto fkpts = kpts.to(kFloat);
 
-        auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);               // [1, 1, n_keypoints, 2]
-        grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / mProb.size(1) - 1; // x
-        grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / mProb.size(0) - 1; // y
+        auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);   // [1, 1, n_keypoints, 2]
+        
+        //  Tensor.slice is the alternative function of Python's Slicing syntex. 
+        //  and quite similar for using.
+        grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / prob.size(1) - 1; // x
+        grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / prob.size(0) - 1; // y
 
-        //  torch.nn.functional.grid_sample(input, grid, mode='bilinear',
-        //                            padding_mode='zeros', align_corners=None)
-        //  : Given an input and a flow-field grid, computes the output
-        //    using input values and pixel locations from grid.
+        //  [Not Perfect]
+        //  at::grid_sampler(Tensor input, Tensor grid, int64 interpolation_mode, int64 padding_mode, bool align_corner)
+        //
+        //      Given an input and a flow-field grid, computes the output  
+        //      using input values and pixel locations from grid.
+        //      'input' is 4d or 5d input (N, C, Hin, Win) or (N, C, Depth, Hin, Win)
+        //      according to 'input' shape determined as (N, Hout, Wout, 2) or (N, D, Hout, Wout)
+        //      Resuling in 'output' (N, C, Hout, Wout) or (N, C, Depth, Hout, Wout).
+        //      
+        //      interpolation_mode  --  '0': bilinear, '1': nearest
+        //      padding_mode        --  '0': zeros, '1': border, '2': reflection
+        //      
+        //  grid[0][0] 에는 keypoints 개수만큼의 (x, y)좌표가 들어있다.
         desc = at::grid_sampler(desc, grid, 0, 0, false); // [1, 256, 1, n_keypoints]       //CHANGED
         desc = desc.squeeze(0).squeeze(1);                // [256, n_keypoints]
 
@@ -212,8 +228,12 @@ namespace NAMU_TEST
         if (use_cuda)
             desc = desc.to(kCPU);
 
-        cv::Mat desc_no_nms(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
+        //  Convert descriptor 
+        //  From at::Tensor To cv::Mat
+        auto desc_size = cv::Size(desc.size(1), desc.size(0));
+        cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
 
+        // Convert Keypoint
         // From torch::Tensor   kpts(=keypoints)
         // To   cv::KeyPoint    keypoints_no_nms
         std::vector<cv::KeyPoint> keypoints_no_nms;
@@ -223,17 +243,20 @@ namespace NAMU_TEST
             keypoints_no_nms.push_back(cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), 8, -1, response));
         }
 
-        cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);
-        cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);
-        for (size_t i = 0; i < keypoints_no_nms.size(); i++)
-        {
-            int x = keypoints_no_nms[i].pt.x;
-            int y = keypoints_no_nms[i].pt.y;
-            kpt_mat.at<float>(i, 0) = (float)keypoints_no_nms[i].pt.x;
-            kpt_mat.at<float>(i, 1) = (float)keypoints_no_nms[i].pt.y;
+        cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
+        cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
+        
+        auto xy         = kpt_mat.ptr<float>(0);
+        auto conf_ptr   = conf.ptr<float>(0);
 
-            conf.at<float>(i, 0) = prob[y][x].item<float>();
+        for(auto iter = keypoints_no_nms.begin(); iter != keypoints_no_nms.end(); iter++)
+        {
+            int x = *(xy++) = (float)(*iter).pt.x;
+            int y = *(xy++) = (float)(*iter).pt.y;
+            *(conf_ptr++)   = (float)(*iter).response; 
         }
+
+        // HERE
 
         cv::Mat descriptors;
         std::vector<cv::KeyPoint> keypoints;
