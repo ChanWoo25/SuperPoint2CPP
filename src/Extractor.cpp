@@ -583,37 +583,37 @@ void SPextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoi
     }
 }
 
-// void SPextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
-//                       OutputArray _descriptors)
-// { 
-//     if(_image.empty())
-//         return;
+void SPextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
+                      OutputArray _descriptors)
+{ 
+    if(_image.empty())
+        return;
 
-//     Mat image = _image.getMat();
-//     assert(image.type() == CV_8UC1 );
+    Mat image = _image.getMat();
+    assert(image.type() == CV_8UC1 );
 
-//     vector<KeyPoint> keypoints;
+    vector<KeyPoint> keypoints;
 
-//     Mat desc = SPdetect(model, image, _keypoints, iniThFAST, true, false);
+    Mat desc = SPdetect(model, image, _keypoints, iniThFAST, true, false);
 
-//     // Mat kpt_mat(keypoints.size(), 2, CV_32F);
-//     // for (size_t i = 0; i < keypoints.size(); i++) {
-//     //     kpt_mat.at<float>(i, 0) = (float)keypoints[i].pt.x;
-//     //     kpt_mat.at<float>(i, 1) = (float)keypoints[i].pt.y;
-//     // }
-//     // Mat descriptors;
-//     // int border = 8;
-//     // int dist_thresh = 4;
-//     // int height = image.rows;
-//     // int width = image.cols;
-//     // nms(kpt_mat, desc, _keypoints, descriptors, border, dist_thresh, width, height);
-//     // cout << "hihihi" << endl;
+    // Mat kpt_mat(keypoints.size(), 2, CV_32F);
+    // for (size_t i = 0; i < keypoints.size(); i++) {
+    //     kpt_mat.at<float>(i, 0) = (float)keypoints[i].pt.x;
+    //     kpt_mat.at<float>(i, 1) = (float)keypoints[i].pt.y;
+    // }
+    // Mat descriptors;
+    // int border = 8;
+    // int dist_thresh = 4;
+    // int height = image.rows;
+    // int width = image.cols;
+    // nms(kpt_mat, desc, _keypoints, descriptors, border, dist_thresh, width, height);
+    // cout << "hihihi" << endl;
 
-//     int nkeypoints = _keypoints.size();
-//     _descriptors.create(nkeypoints, 256, CV_32F);
-//     desc.copyTo(_descriptors.getMat());
+    int nkeypoints = _keypoints.size();
+    _descriptors.create(nkeypoints, 256, CV_32F);
+    desc.copyTo(_descriptors.getMat());
 
-// }
+}
 
 void SPextractor::ComputePyramid(cv::Mat image)
 {

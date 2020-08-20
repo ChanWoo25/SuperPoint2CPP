@@ -14,7 +14,7 @@ message(STATUS ${CMAKE_SOURCE_DIR})
 #message(STATUS ${TORCH_LIBRARIES})
 
 # TEST
-add_executable(test test.cpp )
+add_executable(test test_main.cpp test.cpp)
 target_include_directories(test
 PUBLIC 
    ${PROJECT_SOURCE_DIR}/include
