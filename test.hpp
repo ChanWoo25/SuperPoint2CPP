@@ -68,15 +68,25 @@ class SuperPointFrontend
 {
 public:
     SuperPointFrontend();
+    
     SuperPointFrontend(std::string _weight_dir, bool _use_cuda);
+    
     cv::Mat detect(cv::Mat &img);
     
-    void NMS(cv::Mat det, cv::Mat conf, cv::Mat desc, std::vector<cv::KeyPoint>& pts, cv::Mat& descriptors,
-        int border, int dist_thresh, int img_width, int img_height);
-    void NMS2(std::vector<cv::KeyPoint> det, cv::Mat conf, std::vector<cv::KeyPoint>& pts,
-            int border, int dist_thresh, int img_width, int img_height);
+    void NMS
+    (const cv::Mat& kpts_loc, const cv::Mat& kpts_conf, const cv::Mat& desc_no_nms, 
+     std::vector<cv::KeyPoint> &kpt_nms, cv::Mat &desc_nms, 
+     int border, int dist_thresh, int img_width, int img_height);
+    
+    void NMS2
+    (std::vector<cv::KeyPoint> det, cv::Mat conf, 
+     std::vector<cv::KeyPoint>& pts, int border, 
+     int dist_thresh, int img_width, int img_height);
+    
     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
+    
     void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+
 private:
     std::shared_ptr<SuperPoint> model;
     c10::TensorOptions tensor_opts;
