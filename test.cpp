@@ -242,6 +242,9 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
         float response = prob[kpts[i][0]][kpts[i][1]].item<float>();
         keypoints_no_nms.push_back(cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), 8, -1, response));
     }
+    std::sort(keypoints_no_nms.begin(), keypoints_no_nms.end(), 
+            [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
+
 
     cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
     cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]

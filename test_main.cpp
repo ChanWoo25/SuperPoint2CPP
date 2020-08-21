@@ -36,25 +36,34 @@ int main(const int argc, const char* argv[])
 
  
 
-    cv::Mat key(5 , 2, CV_32FC1, 1);
-    cv::Mat val(5 , 1, CV_32FC1, 2);
+    // cv::Mat key(5 , 2, CV_32FC1, 1);
+    // cv::Mat val(5 , 1, CV_32FC1, 2);
 
-    std::cout << key << std::endl;
-    std::cout << val << std::endl;
+    // std::cout << key << std::endl;
+    // std::cout << val << std::endl;
 
-    auto xy = key.ptr<float>(0);
-    auto val_ptr = val.ptr<float>(0);
+    // auto xy = key.ptr<float>(0);
+    // auto val_ptr = val.ptr<float>(0);
 
-    for (size_t i = 0; i < 5; i++)
-    {
-        //auto xy = key.ptr<float>(i);
-        int x = *(xy++) = float(i * 2 + 0);
-        int y = *(xy++) = float(i * 2 + 1);
-        *(val_ptr++) = float(x * 10 + y);
-    }
-    std::cout << key << std::endl;
-    std::cout << val << std::endl;
+    // for (size_t i = 0; i < 5; i++)
+    // {
+    //     //auto xy = key.ptr<float>(i);
+    //     int x = *(xy++) = float(i * 2 + 0);
+    //     int y = *(xy++) = float(i * 2 + 1);
+    //     *(val_ptr++) = float(x * 10 + y);
+    // }
+    // std::cout << key << std::endl;
+    // std::cout << val << std::endl;
 
+    std::vector<cv::KeyPoint> kpts;
+    kpts.push_back(cv::KeyPoint(cv::Point2d(1, 2), 8, -1, 1.8f));
+    kpts.push_back(cv::KeyPoint(cv::Point2d(7, 3), 8, -1, 12.1f));
+    kpts.push_back(cv::KeyPoint(cv::Point2d(3, 4), 8, -1, 7.4f));
+    kpts.push_back(cv::KeyPoint(cv::Point2d(5, 1), 8, -1, 4.6f));
+    std::sort(kpts.begin(), kpts.end(), 
+        [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
+    for(auto kpt: kpts)
+        std::cout << kpt.pt << ", " << kpt.response << std::endl;
 }
 
 
