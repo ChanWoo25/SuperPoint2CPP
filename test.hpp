@@ -66,22 +66,27 @@ protected:
 
 class SuperPointFrontend
 {
+private:
+    struct KeyPointNode{
+            cv::KeyPoint kpt;
+            int desc_idx;
+    };
+
 public:
     SuperPointFrontend();
-    
     SuperPointFrontend(std::string _weight_dir, bool _use_cuda);
     
+
+    void fast_nms
+    (std::vector<KeyPointNode>& kpts_no_nms, cv::Mat& desc_no_nms,
+     int img_width, int img_height);
+     
     cv::Mat detect(cv::Mat &img);
     
     void NMS
     (const cv::Mat& kpts_loc, const cv::Mat& kpts_conf, const cv::Mat& desc_no_nms, 
      std::vector<cv::KeyPoint> &kpt_nms, cv::Mat &desc_nms, 
      int border, int dist_thresh, int img_width, int img_height);
-    
-    void fast_nms
-    (const std::vector<cv::KeyPoint>& kypts_no_nms, const cv::Mat& desc_no_nms,
-     int border, int dist_thresh, int img_width, int img_height);
-
     void NMS2
     (std::vector<cv::KeyPoint> det, cv::Mat conf, 
      std::vector<cv::KeyPoint>& pts, int border, 
@@ -93,6 +98,8 @@ public:
 
 private:
     std::shared_ptr<SuperPoint> model;
+    cv::Mat desc_nms;
+    std::vector<KeyPointNode> kpts_nms;
     c10::TensorOptions tensor_opts;
     c10::DeviceType device_type;
     torch::Tensor mProb;

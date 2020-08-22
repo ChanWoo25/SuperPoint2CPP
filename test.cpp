@@ -210,72 +210,63 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
 
     //  Convert descriptor 
     //  From at::Tensor To cv::Mat
-    auto desc_size = cv::Size(desc.size(1), desc.size(0));
-    cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
+    auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [n_keypoints, 256]
+    //cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
+    desc_nms.create(desc_size, CV_32FC1);
+    std::memcpy(desc.data_ptr(), desc_nms.data, sizeof(float)*desc.numel());
 
     // Convert Keypoint
     // From torch::Tensor   kpts(=keypoints)
     // To   cv::KeyPoint    keypoints_no_nms
-    std::vector<cv::KeyPoint> keypoints_no_nms;
     for (int i = 0; i < kpts.size(0); i++)
     {
         float response = prob[kpts[i][0]][kpts[i][1]].item<float>();
-        keypoints_no_nms.push_back(cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), 8, -1, response));
+        kpts_nms.push_back({cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), response), i});
     }
-    std::sort(keypoints_no_nms.begin(), keypoints_no_nms.end(), 
-            [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
-    
 
+    fast_nms(kpts_nms, desc_nms, img.cols, img.rows);
 
     // Empty cv::Mat that will update.
-    cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
-    cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
+    cv::Mat kpt_mat(kpts_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
+    cv::Mat conf(kpts_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
     
     auto xy         = kpt_mat.ptr<float>(0);
     auto conf_ptr   = conf.ptr<float>(0);
 
-    for(auto iter = keypoints_no_nms.begin(); iter != keypoints_no_nms.end(); iter++)
+    for(auto iter = kpts_nms.begin(); iter != kpts_nms.end(); iter++)
     {
-        *(xy++) = (float)(*iter).pt.x;
-        *(xy++) = (float)(*iter).pt.y;
-        *(conf_ptr++)   = (float)(*iter).response; 
+        *(xy++) = (float)(*iter).kpt.pt.x;
+        *(xy++) = (float)(*iter).kpt.pt.y;
+        *(conf_ptr++)   = (float)(*iter).kpt.response; 
     }
-
-    std::vector<cv::KeyPoint> kpt_nms;
-    cv::Mat desc_nms;
-
-    int border = 8;
-    int dist_thresh = 4;
-    int height = img.rows;
-    int width = img.cols;
-
-    NMS(kpt_mat, conf, desc_no_nms, kpt_nms, desc_nms, border, dist_thresh, width, height);
 
     return desc_nms;
 }
 
 void SuperPointFrontend::fast_nms
-    (const std::vector<cv::KeyPoint>& kypts_no_nms, const cv::Mat& desc_no_nms,
-     int border, int dist_thresh, int img_width, int img_height)
+    (std::vector<KeyPointNode>& kpts_no_nms, cv::Mat& desc_no_nms,
+     int img_width, int img_height)
 {
     // kpys_no_nms: The keypoints' vectorsorted by conf value
     // Empty cv::Mat that will update.
-
+    auto ptr = *kpts_no_nms.begin();
     // Sorting keypoints by reference value.
-    std::sort(kypts_no_nms.begin(), kypts_no_nms.end(), 
-            [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
+
     
-    cv::Mat kpt_mat(kypts_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
-    cv::Mat conf(kypts_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
+    std::sort(kpts_nms.begin(), kpts_nms.end(), 
+            [](KeyPointNode a, KeyPointNode b) -> bool{ return a.kpt.response > b.kpt.response; });
+    
+    cv::Mat kpt_mat(kpts_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
+    cv::Mat conf(kpts_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
     
     auto xy         = kpt_mat.ptr<float>(0);
     auto conf_ptr   = conf.ptr<float>(0);
 
-    for(auto iter = kypts_no_nms.begin(); iter != kypts_no_nms.end(); iter++)
+    for(auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
     {
-        *(xy++) = (float)(*iter).pt.x;
-        *(xy++) = (float)(*iter).pt.y;
-        *(conf_ptr++)   = (float)(*iter).response; 
+        *(xy++) = (float)(*iter).kpt.pt.x;
+        *(xy++) = (float)(*iter).kpt.pt.y;
+        *(conf_ptr++)   = (float)(*iter).kpt.response; 
     }
 
 
@@ -284,73 +275,58 @@ void SuperPointFrontend::fast_nms
     cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1, cv::Scalar(0));
 
     int nms_idx(0);
-    for (auto iter = kypts_no_nms.begin(); iter != kypts_no_nms.end(); iter++)
+    for (auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
     {
-        int uu = (int)(*iter).pt.x;
-        int vv = (int)(*iter).pt.y;
+        int uu = (int)(*iter).kpt.pt.x;
+        int vv = (int)(*iter).kpt.pt.y;
 
         grid.at<char>(vv, uu) = 1;
         inds.at<unsigned short>(vv, uu) = (nms_idx++);
-        confidence.at<float>(vv, uu) = (*iter).response;
+        confidence.at<float>(vv, uu) = (*iter).kpt.response;
     }
 
+    // Padding grid Mat.
     int d(nms_dist_thres), b(nms_border);
     cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
-    //HERE
 
-    for (int i = 0; i < pts_raw.size(); i++)
+    // Process Non-Maximum Suppression from highest confidence Keypoint.
+    // find Keypoints in range of nms_dist_thres and set 0. 
+    std::vector<cv::KeyPoint> kpts_nms;
+    cv::Mat desc_nms;
+    int cnt = 0;
+
+    for (auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
     {
-        int uu = (int)pts_raw[i].x + dist_thresh;
-        int vv = (int)pts_raw[i].y + dist_thresh;
-
-        if (grid.at<char>(vv, uu) != 1)
+        int u = (int)(*iter).kpt.pt.x + d;
+        int v = (int)(*iter).kpt.pt.y + d;
+        if(u < b | v < b | u > (img_width - b) | v > (img_height - b))
             continue;
-
-        for (int k = -dist_thresh; k < (dist_thresh + 1); k++)
-            for (int j = -dist_thresh; j < (dist_thresh + 1); j++)
-            {
-                // Skip self-comparing.
-                if (j == 0 && k == 0)
-                    continue;
-
-                if (kpts_conf.at<float>(vv + k, uu + j) < kpts_conf.at<float>(vv, uu))
-                    grid.at<char>(vv + k, uu + j) = 0;
-            }
-        grid.at<char>(vv, uu) = 2;
-    }
-
-    size_t valid_cnt = 0;
-    std::vector<int> select_indice;
-
-    for (int v = 0; v < (img_height + dist_thresh); v++)
-    {
-        for (int u = 0; u < (img_width + dist_thresh); u++)
+        
+        auto center = grid.ptr<char>(v) + u;
+        auto center_conf = confidence.ptr<float>(v) + u;
+        if (*center == 1)
         {
-            if (u - dist_thresh >= (img_width - border) || u - dist_thresh < border || v - dist_thresh >= (img_height - border) || v - dist_thresh < border)
-                continue;
-
-            if (grid.at<char>(v, u) == 2)
+            int r = 2 * d + 1;
+            for(int i=0; i<r; i++)
             {
-                int select_ind = (int)inds.at<unsigned short>(v - dist_thresh, u - dist_thresh);
-                kpt_nms.push_back(cv::KeyPoint(pts_raw[select_ind], 1.0f));
-
-                select_indice.push_back(select_ind);
-                valid_cnt++;
+                auto ptr_grid = grid.ptr<char>(v-d+i) + (u-d);
+                auto ptr_conf = confidence.ptr<float>(v-d+i) + (u-d);
+                for(int j=0; j<r; j++)
+                {
+                    if(*center_conf > *ptr_conf)    
+                        *ptr_grid = 0;
+                    ptr_grid++;
+                    ptr_conf++;
+                }
             }
+            *center = 2; cnt++;
+            // If extract 300 keypoints, it's enough, Break.
+            if(cnt >= 300) break;
+            kpts_nms.push_back((*iter).kpt);
+            desc_nms.push_back(desc_no_nms.row((*iter).desc_idx));
         }
+        else{ continue; }
     }
-
-    //  the vector of keypoints by nms processing.
-    desc_nms.create(select_indice.size(), 256, CV_32F);
-
-    for (int i = 0; i < select_indice.size(); i++)
-    {
-        for (int j = 0; j < 256; j++)
-        {
-            desc_nms.at<float>(i, j) = desc_no_nms.at<float>(select_indice[i], j);
-        }
-    }
-
 }
 
 void SuperPointFrontend::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms)

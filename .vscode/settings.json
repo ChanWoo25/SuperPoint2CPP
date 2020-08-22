@@ -60,6 +60,7 @@
         "__nullptr": "cpp",
         "variant": "cpp",
         "__bit_reference": "cpp",
-        "memory_resource": "cpp"
+        "memory_resource": "cpp",
+        "random": "cpp"
     }
 }

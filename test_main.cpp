@@ -1,9 +1,3 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <vector>
-#include <ctime>
 #include "test.hpp"
 
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
@@ -34,7 +28,13 @@ int main(const int argc, const char* argv[])
                             .device(c10::DeviceType(torch::kCUDA))
                             .requires_grad(false);
 
- 
+    cv::Mat cv_mat = cv::Mat::eye(3,3,CV_32F);
+    torch::Tensor tensor = torch::zeros({3, 3}, torch::kF32);
+
+    std::memcpy(tensor.data_ptr(), cv_mat.data, sizeof(float)*tensor.numel());
+
+    std::cout << cv_mat << std::endl;
+    std::cout << tensor << std::endl;
 
     // cv::Mat key(5 , 2, CV_32FC1, 1);
     // cv::Mat val(5 , 1, CV_32FC1, 2);
@@ -55,15 +55,28 @@ int main(const int argc, const char* argv[])
     // std::cout << key << std::endl;
     // std::cout << val << std::endl;
 
-    std::vector<cv::KeyPoint> kpts;
-    kpts.push_back(cv::KeyPoint(cv::Point2d(1, 2), 8, -1, 1.8f));
-    kpts.push_back(cv::KeyPoint(cv::Point2d(7, 3), 8, -1, 12.1f));
-    kpts.push_back(cv::KeyPoint(cv::Point2d(3, 4), 8, -1, 7.4f));
-    kpts.push_back(cv::KeyPoint(cv::Point2d(5, 1), 8, -1, 4.6f));
-    std::sort(kpts.begin(), kpts.end(), 
-        [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
-    for(auto kpt: kpts)
-        std::cout << kpt.pt << ", " << kpt.response << std::endl;
+    // std::vector<cv::KeyPoint> kpts;
+    // kpts.push_back(cv::KeyPoint(cv::Point2d(1, 2), 8, -1, 1.8f));
+    // kpts.push_back(cv::KeyPoint(cv::Point2d(7, 3), 8, -1, 12.1f));
+    // kpts.push_back(cv::KeyPoint(cv::Point2d(3, 4), 8, -1, 7.4f));
+    // kpts.push_back(cv::KeyPoint(cv::Point2d(5, 1), 8, -1, 4.6f));
+    // std::sort(kpts.begin(), kpts.end(), 
+    //     [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
+    // for(auto kpt: kpts)
+    //     std::cout << kpt.pt << ", " << kpt.response << std::endl;
+    
+    
+    /*************************************************************/
+    printSection(5, "cv::Mat's ROI [DONE]");
+    // cv::Mat mat(cv::Size(4, 4), CV_32FC1, cv::Scalar(1));
+    // std::cout << mat << std::endl; 
+
+    // cv::Mat sub = cv::Mat(mat, cv::Rect(cv::Point2d(1, 1), cv::Point2d(3, 3)));
+    // sub.setTo(0);
+    // std::cout << mat << std::endl;
+
+
+
 }
 
 
