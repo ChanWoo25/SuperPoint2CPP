@@ -245,7 +245,8 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     std::sort(keypoints_no_nms.begin(), keypoints_no_nms.end(), 
             [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
 
-
+    // HERE
+    
     cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
     cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
     
