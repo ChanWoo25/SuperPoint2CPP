@@ -83,10 +83,6 @@ public:
      
     cv::Mat detect(cv::Mat &img);
     
-    void NMS
-    (const cv::Mat& kpts_loc, const cv::Mat& kpts_conf, const cv::Mat& desc_no_nms, 
-     std::vector<cv::KeyPoint> &kpt_nms, cv::Mat &desc_nms, 
-     int border, int dist_thresh, int img_width, int img_height);
     void NMS2
     (std::vector<cv::KeyPoint> det, cv::Mat conf, 
      std::vector<cv::KeyPoint>& pts, int border, 
@@ -99,19 +95,20 @@ public:
 private:
     std::shared_ptr<SuperPoint> model;
     cv::Mat desc_nms;
-    std::vector<KeyPointNode> kpts_nms;
+    cv::Mat kpts_nms_loc;
+    cv::Mat kpts_nms_conf;
+    std::vector<cv::KeyPoint> kpts_nms;
     c10::TensorOptions tensor_opts;
     c10::DeviceType device_type;
     torch::Tensor mProb;
     torch::Tensor mDesc;
+    int MAX_KEYPOINT = 300;
     int nms_border = 8;
     int nms_dist_thres = 4;
     bool use_cuda;
     float nms_dist;
     float conf_thres;
     float nn_thres;
-    int output_cell = 8;
-    int range_border = 4;
     bool verbose = 0;
 };
 

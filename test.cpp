@@ -212,32 +212,32 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     //  From at::Tensor To cv::Mat
     auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [n_keypoints, 256]
     //cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
-    desc_nms.create(desc_size, CV_32FC1);
-    std::memcpy(desc.data_ptr(), desc_nms.data, sizeof(float)*desc.numel());
+    cv::Mat desc_no_nms(desc_size, CV_32F);
+    std::memcpy(desc.data_ptr(), desc_no_nms.data, sizeof(float)*desc.numel());
 
     // Convert Keypoint
     // From torch::Tensor   kpts(=keypoints)
     // To   cv::KeyPoint    keypoints_no_nms
+    std::vector<KeyPointNode> kpts_no_nms;
     for (int i = 0; i < kpts.size(0); i++)
     {
         float response = prob[kpts[i][0]][kpts[i][1]].item<float>();
-        kpts_nms.push_back({cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), response), i});
+        kpts_no_nms.push_back({cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), response), i});
     }
 
-    fast_nms(kpts_nms, desc_nms, img.cols, img.rows);
+    
+    fast_nms(kpts_no_nms, desc_nms, img.cols, img.rows);
 
     // Empty cv::Mat that will update.
-    cv::Mat kpt_mat(kpts_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
-    cv::Mat conf(kpts_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
-    
-    auto xy         = kpt_mat.ptr<float>(0);
-    auto conf_ptr   = conf.ptr<float>(0);
-
+    kpts_nms_loc.create(kpts_nms.size(), 2, CV_32F); 
+    kpts_nms_conf.create(kpts_nms.size(), 1, CV_32F); 
+    auto xy         = kpts_nms_loc.ptr<float>(0);
+    auto conf_ptr   = kpts_nms_conf.ptr<float>(0);
     for(auto iter = kpts_nms.begin(); iter != kpts_nms.end(); iter++)
     {
-        *(xy++) = (float)(*iter).kpt.pt.x;
-        *(xy++) = (float)(*iter).kpt.pt.y;
-        *(conf_ptr++)   = (float)(*iter).kpt.response; 
+        *(xy++) = (float)(*iter).pt.x;
+        *(xy++) = (float)(*iter).pt.y;
+        *(conf_ptr++)   = (float)(*iter).response; 
     }
 
     return desc_nms;
@@ -286,6 +286,10 @@ void SuperPointFrontend::fast_nms
     }
 
     // Padding grid Mat.
+    //  cv::copyMakeBorder(intputArr, outputArr, offset * 4, BorderType, BorderScalar)
+    //      input, output arr를 따로 지정할 수 있으나 여기서는 in-place 수행을 위해 grid, grid
+    //      사방면에 border 길이를 지정해주고, How는 bordertype을 통해 지정.
+    //      constant로 채운다고 했으므로 어떤 값으로 채울지 BorderScalar(0)로 넘김.
     int d(nms_dist_thres), b(nms_border);
     cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
 
@@ -295,6 +299,10 @@ void SuperPointFrontend::fast_nms
     cv::Mat desc_nms;
     int cnt = 0;
 
+    // 하나의 for문으로 해결하기 위해 노력했다.
+    // 허락된 Boundary 안쪽의 높은 Confidence를 가진 Keypoint부터 시작하여
+    // 자기 주변 distance 안의 자신보다 낮은 Confidence를 지닌 Keypoint를 제거한다.
+    // Input은 함수 인자로 받지만, output은 SuprpointFrontend의 멤버 변수로 저장한다.
     for (auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
     {
         int u = (int)(*iter).kpt.pt.x + d;
@@ -321,7 +329,7 @@ void SuperPointFrontend::fast_nms
             }
             *center = 2; cnt++;
             // If extract 300 keypoints, it's enough, Break.
-            if(cnt >= 300) break;
+            if(cnt >= MAX_KEYPOINT) break;
             kpts_nms.push_back((*iter).kpt);
             desc_nms.push_back(desc_no_nms.row((*iter).desc_idx));
         }
@@ -491,98 +499,6 @@ void SuperPointFrontend::NMS2
     //         descriptors.at<float>(i, j) = desc.at<float>(select_indice[i], j);
     //     }
     // }
-}
-
-void SuperPointFrontend::NMS
-    (const cv::Mat& kpts_loc, const cv::Mat& kpts_conf, const cv::Mat& desc_no_nms, 
-     std::vector<cv::KeyPoint> &kpt_nms, cv::Mat &desc_nms, 
-     int border, int dist_thresh, int img_width, int img_height)
-{
-    std::vector<cv::Point2f> pts_raw;
-    auto kpts_loc_ptr = kpts_loc.ptr<float>(0);
-
-    for (int i = 0; i < kpts_loc.rows; i++)
-    {
-        int u = (int)*(kpts_loc_ptr++);
-        int v = (int)*(kpts_loc_ptr++);
-        pts_raw.push_back(cv::Point2f(u, v));
-    }
-
-    cv::Mat grid = cv::Mat(cv::Size(img_width, img_height), CV_8UC1, cv::Scalar(0));
-    cv::Mat inds = cv::Mat(cv::Size(img_width, img_height), CV_16UC1, cv::Scalar(0));
-    cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1, cv::Scalar(0));
-
-    for (int i = 0; i < pts_raw.size(); i++)
-    {
-        int uu = (int)pts_raw[i].x;
-        int vv = (int)pts_raw[i].y;
-
-        grid.at<char>(vv, uu) = 1;
-        inds.at<unsigned short>(vv, uu) = i;
-
-        confidence.at<float>(vv, uu) = kpts_conf.at<float>(i, 0);
-    }
-
-    //  cv::copyMakeBorder(intputArr, outputArr, offset * 4, BorderType, BorderScalar)
-    //      input, output arr를 따로 지정할 수 있으나 여기서는 in-place 수행을 위해 grid, grid
-    //      사방면에 border 길이를 지정해주고, How는 bordertype을 통해 지정.
-    //      constant로 채운다고 했으므로 어떤 값으로 채울지 BorderScalar(0)로 넘김.
-    int d(nms_dist_thres), b(nms_border);
-    cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
-
-
-    for (int i = 0; i < pts_raw.size(); i++)
-    {
-        int uu = (int)pts_raw[i].x + dist_thresh;
-        int vv = (int)pts_raw[i].y + dist_thresh;
-
-        if (grid.at<char>(vv, uu) != 1)
-            continue;
-
-        for (int k = -dist_thresh; k < (dist_thresh + 1); k++)
-            for (int j = -dist_thresh; j < (dist_thresh + 1); j++)
-            {
-                // Skip self-comparing.
-                if (j == 0 && k == 0)
-                    continue;
-
-                if (kpts_conf.at<float>(vv + k, uu + j) < kpts_conf.at<float>(vv, uu))
-                    grid.at<char>(vv + k, uu + j) = 0;
-            }
-        grid.at<char>(vv, uu) = 2;
-    }
-
-    size_t valid_cnt = 0;
-    std::vector<int> select_indice;
-
-    for (int v = 0; v < (img_height + dist_thresh); v++)
-    {
-        for (int u = 0; u < (img_width + dist_thresh); u++)
-        {
-            if (u - dist_thresh >= (img_width - border) || u - dist_thresh < border || v - dist_thresh >= (img_height - border) || v - dist_thresh < border)
-                continue;
-
-            if (grid.at<char>(v, u) == 2)
-            {
-                int select_ind = (int)inds.at<unsigned short>(v - dist_thresh, u - dist_thresh);
-                kpt_nms.push_back(cv::KeyPoint(pts_raw[select_ind], 1.0f));
-
-                select_indice.push_back(select_ind);
-                valid_cnt++;
-            }
-        }
-    }
-
-    //  the vector of keypoints by nms processing.
-    desc_nms.create(select_indice.size(), 256, CV_32F);
-
-    for (int i = 0; i < select_indice.size(); i++)
-    {
-        for (int j = 0; j < 256; j++)
-        {
-            desc_nms.at<float>(i, j) = desc_no_nms.at<float>(select_indice[i], j);
-        }
-    }
 }
 
 void printSection(int n, std::string s)
