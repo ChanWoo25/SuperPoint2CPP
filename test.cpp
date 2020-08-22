@@ -79,38 +79,18 @@ std::vector<Tensor> SuperPoint::forward(torch::Tensor x)
     auto cDa = relu(convDa->forward(x));
     auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
 
-    if (verbose)
-        desc.print();
     auto dn = norm(desc, 2, 1);
-    if (verbose)
-        dn.print();
     desc = desc.div(unsqueeze(dn, 1));
-    if (verbose)
-        desc.print();
 
-    if (verbose)
-        semi.print();
     semi = softmax(semi, 1);
-    if (verbose)
-        semi.print();
     semi = semi.slice(1, 0, 64);
-    if (verbose)
-        semi.print();
     semi = semi.permute({0, 2, 3, 1}); // [B, H/8, W/8, 64]
-    if (verbose)
-        semi.print();
 
     int Hc = semi.size(1);
     int Wc = semi.size(2);
     semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
-    if (verbose)
-        semi.print();
     semi = semi.permute({0, 1, 3, 2, 4});
-    if (verbose)
-        semi.print();
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8}); // [B, H, W]
-    if (verbose)
-        semi.print();
 
     std::vector<Tensor> ret;
     ret.push_back(semi);
@@ -244,9 +224,10 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     }
     std::sort(keypoints_no_nms.begin(), keypoints_no_nms.end(), 
             [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
-
-    // HERE
     
+
+
+    // Empty cv::Mat that will update.
     cv::Mat kpt_mat(keypoints_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
     cv::Mat conf(keypoints_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
     
@@ -260,19 +241,116 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
         *(conf_ptr++)   = (float)(*iter).response; 
     }
 
-    // HERE
-
-    cv::Mat descriptors;
-    std::vector<cv::KeyPoint> keypoints;
+    std::vector<cv::KeyPoint> kpt_nms;
+    cv::Mat desc_nms;
 
     int border = 8;
     int dist_thresh = 4;
     int height = img.rows;
     int width = img.cols;
 
-    NMS(kpt_mat, conf, desc_no_nms, keypoints, descriptors, border, dist_thresh, width, height);
+    NMS(kpt_mat, conf, desc_no_nms, kpt_nms, desc_nms, border, dist_thresh, width, height);
 
-    return descriptors;
+    return desc_nms;
+}
+
+void SuperPointFrontend::fast_nms
+    (const std::vector<cv::KeyPoint>& kypts_no_nms, const cv::Mat& desc_no_nms,
+     int border, int dist_thresh, int img_width, int img_height)
+{
+    // kpys_no_nms: The keypoints' vectorsorted by conf value
+    // Empty cv::Mat that will update.
+
+    // Sorting keypoints by reference value.
+    std::sort(kypts_no_nms.begin(), kypts_no_nms.end(), 
+            [](cv::KeyPoint a, cv::KeyPoint b) { return a.response > b.response; });
+    
+    cv::Mat kpt_mat(kypts_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
+    cv::Mat conf(kypts_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
+    
+    auto xy         = kpt_mat.ptr<float>(0);
+    auto conf_ptr   = conf.ptr<float>(0);
+
+    for(auto iter = kypts_no_nms.begin(); iter != kypts_no_nms.end(); iter++)
+    {
+        *(xy++) = (float)(*iter).pt.x;
+        *(xy++) = (float)(*iter).pt.y;
+        *(conf_ptr++)   = (float)(*iter).response; 
+    }
+
+
+    cv::Mat grid = cv::Mat(cv::Size(img_width, img_height), CV_8UC1, cv::Scalar(0));
+    cv::Mat inds = cv::Mat(cv::Size(img_width, img_height), CV_16UC1, cv::Scalar(0));
+    cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1, cv::Scalar(0));
+
+    int nms_idx(0);
+    for (auto iter = kypts_no_nms.begin(); iter != kypts_no_nms.end(); iter++)
+    {
+        int uu = (int)(*iter).pt.x;
+        int vv = (int)(*iter).pt.y;
+
+        grid.at<char>(vv, uu) = 1;
+        inds.at<unsigned short>(vv, uu) = (nms_idx++);
+        confidence.at<float>(vv, uu) = (*iter).response;
+    }
+
+    int d(nms_dist_thres), b(nms_border);
+    cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
+    //HERE
+
+    for (int i = 0; i < pts_raw.size(); i++)
+    {
+        int uu = (int)pts_raw[i].x + dist_thresh;
+        int vv = (int)pts_raw[i].y + dist_thresh;
+
+        if (grid.at<char>(vv, uu) != 1)
+            continue;
+
+        for (int k = -dist_thresh; k < (dist_thresh + 1); k++)
+            for (int j = -dist_thresh; j < (dist_thresh + 1); j++)
+            {
+                // Skip self-comparing.
+                if (j == 0 && k == 0)
+                    continue;
+
+                if (kpts_conf.at<float>(vv + k, uu + j) < kpts_conf.at<float>(vv, uu))
+                    grid.at<char>(vv + k, uu + j) = 0;
+            }
+        grid.at<char>(vv, uu) = 2;
+    }
+
+    size_t valid_cnt = 0;
+    std::vector<int> select_indice;
+
+    for (int v = 0; v < (img_height + dist_thresh); v++)
+    {
+        for (int u = 0; u < (img_width + dist_thresh); u++)
+        {
+            if (u - dist_thresh >= (img_width - border) || u - dist_thresh < border || v - dist_thresh >= (img_height - border) || v - dist_thresh < border)
+                continue;
+
+            if (grid.at<char>(v, u) == 2)
+            {
+                int select_ind = (int)inds.at<unsigned short>(v - dist_thresh, u - dist_thresh);
+                kpt_nms.push_back(cv::KeyPoint(pts_raw[select_ind], 1.0f));
+
+                select_indice.push_back(select_ind);
+                valid_cnt++;
+            }
+        }
+    }
+
+    //  the vector of keypoints by nms processing.
+    desc_nms.create(select_indice.size(), 256, CV_32F);
+
+    for (int i = 0; i < select_indice.size(); i++)
+    {
+        for (int j = 0; j < 256; j++)
+        {
+            desc_nms.at<float>(i, j) = desc_no_nms.at<float>(select_indice[i], j);
+        }
+    }
+
 }
 
 void SuperPointFrontend::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms)
@@ -451,17 +529,12 @@ void SuperPointFrontend::NMS
     {
         int u = (int)*(kpts_loc_ptr++);
         int v = (int)*(kpts_loc_ptr++);
-        // float conf = det.at<float>(i, 2);
         pts_raw.push_back(cv::Point2f(u, v));
     }
 
     cv::Mat grid = cv::Mat(cv::Size(img_width, img_height), CV_8UC1, cv::Scalar(0));
     cv::Mat inds = cv::Mat(cv::Size(img_width, img_height), CV_16UC1, cv::Scalar(0));
     cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1, cv::Scalar(0));
-
-    grid.setTo(0);
-    inds.setTo(0);
-    confidence.setTo(0);
 
     for (int i = 0; i < pts_raw.size(); i++)
     {
@@ -478,7 +551,8 @@ void SuperPointFrontend::NMS
     //      input, output arr를 따로 지정할 수 있으나 여기서는 in-place 수행을 위해 grid, grid
     //      사방면에 border 길이를 지정해주고, How는 bordertype을 통해 지정.
     //      constant로 채운다고 했으므로 어떤 값으로 채울지 BorderScalar(0)로 넘김.
-    cv::copyMakeBorder(grid, grid, dist_thresh, dist_thresh, dist_thresh, dist_thresh, cv::BORDER_CONSTANT, 0);
+    int d(nms_dist_thres), b(nms_border);
+    cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
 
 
     for (int i = 0; i < pts_raw.size(); i++)

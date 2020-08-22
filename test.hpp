@@ -78,6 +78,10 @@ public:
      std::vector<cv::KeyPoint> &kpt_nms, cv::Mat &desc_nms, 
      int border, int dist_thresh, int img_width, int img_height);
     
+    void fast_nms
+    (const std::vector<cv::KeyPoint>& kypts_no_nms, const cv::Mat& desc_no_nms,
+     int border, int dist_thresh, int img_width, int img_height);
+
     void NMS2
     (std::vector<cv::KeyPoint> det, cv::Mat conf, 
      std::vector<cv::KeyPoint>& pts, int border, 
@@ -93,6 +97,8 @@ private:
     c10::DeviceType device_type;
     torch::Tensor mProb;
     torch::Tensor mDesc;
+    int nms_border = 8;
+    int nms_dist_thres = 4;
     bool use_cuda;
     float nms_dist;
     float conf_thres;
