@@ -8,6 +8,7 @@
 #include <ctime>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 
 namespace NAMU_TEST
 {
@@ -18,6 +19,8 @@ using namespace nn;
 void printSection(int n, std::string s);
 std::string cv_type2str(int type);
 void test_with_magicleap();
+cv::Mat argmin_cv_mat(const cv::Mat& mat, int axis);
+cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score);
 class SuperPoint : public Module {
 public:
     //Constructor
@@ -90,14 +93,15 @@ public:
     
     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
     
-    void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+    void computeDescriptors();
 
 private:
     std::shared_ptr<SuperPoint> model;
     cv::Mat desc_nms;
     cv::Mat kpts_nms_loc;
     cv::Mat kpts_nms_conf;
-    std::vector<KeyPointNode> kpts_nms;
+    std::vector<KeyPointNode> kpts_node_nms;
+    std::vector<cv::KeyPoint> kpts_nms;
     c10::TensorOptions tensor_opts;
     c10::DeviceType device_type;
     torch::Tensor mProb;
@@ -129,7 +133,7 @@ private:
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API
     int MAX_FRAME_NUM = 1000000;
     int current_frame_num = 0;
-    cv::Size img_size;
+    cv::Size img_size = {120, 160};
 public:
     VideoStreamer(){
         cap.open(deviceID, apiID);
@@ -163,13 +167,38 @@ public:
         img_source = input_device::IS_VIDEO_FILE;
     }
 
-    cv::Mat read_image(const string& path, const cv::Size& img_size);
+    cv::Mat read_image(const string& path);
     // Read a image as grayscale and resize to img_size.
 
     bool next_frame(cv::Mat& img);
 
 
 };
+
+class Tracker{
+/*
+    Class to manage a fixed memory of points and descriptors 
+    that enables sparse optical flow point tracking.
+
+    Internally, the tracker stores a 'tracks' matrix 
+    sized M x (2+L), of M tracks with maximum length L, 
+    where each row corresponds to:
+        row_m = [track_id_m, avg_desc_score_m, point_id_0_m, 
+                ..., point_id_L-1_m].
+*/
+private:
+    int MAX_LEN;
+    int MAX_SCORE=9999;
+    float nn_thres;
+    int track_cnt=0;
+    cv::Mat last_desc;
+    std::vector<cv::Point> all_pts;
+    
+public:
+    Tracker();
+    cv::Mat nn_match_two_way(const cv::Mat& desc1, const cv::Mat& desc2);
+};
+
 cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
 // torch::Tensor NMS(torch::Tensor kpts);
 

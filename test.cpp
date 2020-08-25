@@ -22,6 +22,111 @@ that may be associated with a Module:
 which performs a deepcopy of a cloneable Module hierarchy.
 
 */
+cv::Mat argmin_cv_mat(const cv::Mat& mat, int axis){
+    if(mat.empty())
+        return cv::Mat(0, 0, CV_32F);
+    
+    
+    if(axis == 0)
+    {
+        int n = mat.size().height;
+        int m = mat.size().width;
+        cv::Mat ret(n, 1, CV_32S);
+        auto ret_ptr = ret.ptr<int>(0);
+        for(int i=0; i<n; i++)
+        {
+            auto ptr = mat.ptr<float>(i);
+            float val = std::numeric_limits<float>::max();
+            int idx(-1);
+            for(int j=0; j<m; j++)
+            {
+                if(val > *(ptr++))
+                    val = *ptr, idx = j;
+            }
+            *(ret_ptr) = idx;
+        }
+    }
+    else if(axis == 1)
+    {
+        cv::Mat _mat = mat.clone().t();
+        int n = _mat.size().height;
+        int m = _mat.size().width;
+        cv::Mat ret(n, 1, CV_32S);
+        auto ret_ptr = ret.ptr<int>(0);
+        for(int i=0; i<n; i++)
+        {
+            auto ptr = _mat.ptr<float>(i);
+            float val = std::numeric_limits<float>::max();
+            int idx(-1);
+            for(int j=0; j<m; j++)
+            {
+                if(val > *(ptr++))
+                    val = *ptr, idx = j;
+            }
+            *(ret_ptr) = idx;
+        }
+    }
+    else
+    {
+        std::cerr << "Invalid axis.\n";
+        exit(3);
+    }
+}
+
+cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score){
+    if(mat.empty())
+        return cv::Mat(0, 0, CV_32F);
+    
+    
+    if(axis == 0)
+    {
+        int n = mat.size().height;
+        int m = mat.size().width;
+        cv::Mat ret(1, n, CV_32S);
+        auto ret_ptr = ret.ptr<int>(0);
+        auto score_ptr = score.ptr<float>(0); 
+        for(int i=0; i<n; i++)
+        {
+            auto ptr = mat.ptr<float>(i);
+            float val = std::numeric_limits<float>::max();
+            int idx(-1);
+            for(int j=0; j<m; j++)
+            {
+                if(val > *(ptr++))
+                    val = *ptr, idx = j;
+            }
+            *(ret_ptr++) = idx;
+            *(score_ptr++) = val;
+        }
+    }
+    else if(axis == 1)
+    {
+        cv::Mat _mat = mat.clone().t();
+        int n = _mat.size().height;
+        int m = _mat.size().width;
+        cv::Mat ret(1, n, CV_32S);
+        auto ret_ptr = ret.ptr<int>(0);
+        auto score_ptr = score.ptr<float>(0); 
+        for(int i=0; i<n; i++)
+        {
+            auto ptr = _mat.ptr<float>(i);
+            float val = std::numeric_limits<float>::max();
+            int idx(-1);
+            for(int j=0; j<m; j++)
+            {
+                if(val > *(ptr++))
+                    val = *ptr, idx = j;
+            }
+            *(ret_ptr++) = idx;
+            *(score_ptr++) = val;
+        }
+    }
+    else
+    {
+        std::cerr << "Invalid axis.\n";
+        exit(3);
+    }
+}
 
 SuperPoint::SuperPoint()
 {
@@ -229,11 +334,11 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     fast_nms(kpts_no_nms, desc_nms, img.cols, img.rows);
 
     // Empty cv::Mat that will update.
-    kpts_nms_loc.create(kpts_nms.size(), 2, CV_32F); 
-    kpts_nms_conf.create(kpts_nms.size(), 1, CV_32F); 
+    kpts_nms_loc.create(kpts_node_nms.size(), 2, CV_32F); 
+    kpts_nms_conf.create(kpts_node_nms.size(), 1, CV_32F); 
     auto xy         = kpts_nms_loc.ptr<float>(0);
     auto conf_ptr   = kpts_nms_conf.ptr<float>(0);
-    for(auto iter = kpts_nms.begin(); iter != kpts_nms.end(); iter++)
+    for(auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
     {
         *(xy++) = (float)(*iter).kpt.pt.x;
         *(xy++) = (float)(*iter).kpt.pt.y;
@@ -253,7 +358,7 @@ void SuperPointFrontend::fast_nms
     // Sorting keypoints by reference value.
 
     
-    std::sort(kpts_nms.begin(), kpts_nms.end(), 
+    std::sort(kpts_node_nms.begin(), kpts_node_nms.end(), 
             [](KeyPointNode a, KeyPointNode b) -> bool{ return a.kpt.response > b.kpt.response; });
     
     cv::Mat kpt_mat(kpts_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
@@ -295,7 +400,7 @@ void SuperPointFrontend::fast_nms
 
     // Process Non-Maximum Suppression from highest confidence Keypoint.
     // find Keypoints in range of nms_dist_thres and set 0. 
-    std::vector<cv::KeyPoint> kpts_nms;
+    
     cv::Mat desc_nms;
     int cnt = 0;
 
@@ -383,17 +488,18 @@ void SuperPointFrontend::getKeyPoints(float threshold, int iniX, int maxX, int i
     }
 }
 
-void SuperPointFrontend::computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors)
+void SuperPointFrontend::computeDescriptors() //const std::vector<cv::KeyPoint> &kpts_nms, cv::Mat &desc_nms
 {
-    cv::Mat kpt_mat(keypoints.size(), 2, CV_32F); // [n_keypoints, 2]  (y, x)
+    cv::Mat kpt_mat(kpts_nms.size(), 2, CV_32F); // [n_keypoints, 2]  (y, x)
 
-    for (size_t i = 0; i < keypoints.size(); i++)
+    auto kpt_mat_ptr = kpt_mat.ptr<float>(0);
+    for (auto iter = kpts_nms.begin(); iter != kpts_nms.end(); iter++)
     {
-        kpt_mat.at<float>(i, 0) = (float)keypoints[i].pt.y;
-        kpt_mat.at<float>(i, 1) = (float)keypoints[i].pt.x;
+        *(kpt_mat_ptr++) = (float)(*iter).pt.y;
+        *(kpt_mat_ptr++) = (float)(*iter).pt.x;
     }
-
-    auto fkpts = torch::from_blob(kpt_mat.data, {(long long)keypoints.size(), 2}, kFloat); //CHANGED (long long)
+    
+    auto fkpts = torch::from_blob(kpt_mat.data, {(long long)kpts_nms.size(), 2}, kFloat); //CHANGED (long long)
 
     auto grid = torch::zeros({1, 1, fkpts.size(0), 2});                         // [1, 1, n_keypoints, 2]
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / mProb.size(1) - 1; // x
@@ -411,7 +517,7 @@ void SuperPointFrontend::computeDescriptors(const std::vector<cv::KeyPoint> &key
 
     cv::Mat desc_mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
 
-    descriptors = desc_mat.clone();
+    desc_nms = desc_mat.clone();
 }
 
 void SuperPointFrontend::NMS2
@@ -514,7 +620,7 @@ void printSection(int n, std::string s)
 
 
 
-cv::Mat VideoStreamer::read_image(const string& path, const cv::Size& img_size)
+cv::Mat VideoStreamer::read_image(const string& path)
 {
     cv::Mat gray_img = cv::imread(path, cv::IMREAD_GRAYSCALE);
     // resampling using pixel area relation
@@ -524,10 +630,8 @@ cv::Mat VideoStreamer::read_image(const string& path, const cv::Size& img_size)
         std::cerr << "Error reading image.\n";
         exit('2');
     }
-
-    gray_img.convertTo(gray_img, -1);
-    std::cout << gray_img.type() << std::endl;
-
+    gray_img.convertTo(gray_img, CV_32F);
+    return gray_img/255.;
 }
 
 bool VideoStreamer::next_frame(cv::Mat& img)
@@ -535,7 +639,11 @@ bool VideoStreamer::next_frame(cv::Mat& img)
     if(current_frame_num >= MAX_FRAME_NUM) return false;
     if(img_source == input_device::IS_CAMERA)
     {
-        cap.read(img);
+        if(!cap.read(img))
+        {
+            std::cout << "No Image.\n";
+            return false;
+        }
         cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
         cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
         img.convertTo(img, CV_32F);
@@ -544,6 +652,11 @@ bool VideoStreamer::next_frame(cv::Mat& img)
     else if(img_source == input_device::IS_VIDEO_FILE)
     {
         cap >> img;
+        if(img.empty())
+        {
+            std::cout << "No Image.\n";
+            return false;
+        }
         cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
         cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
         img.convertTo(img, CV_32F);
@@ -557,6 +670,53 @@ bool VideoStreamer::next_frame(cv::Mat& img)
     current_frame_num++;
     return true;
 }
+
+Tracker::Tracker()
+{
+
+}
+
+cv::Mat Tracker::nn_match_two_way(const cv::Mat& desc1, const cv::Mat& desc2)
+{
+    assert(desc1.size() == desc2.size() && nn_thres > 0.0);
+    
+    // Compute L2 Distance. Easy since vectors are unit normalized.
+    cv::Mat dmat = desc1.t() * desc2;
+    dmat = cv::min(cv::max(dmat, -1), 1);
+    cv::sqrt((2 - 2 * dmat), dmat);
+
+    // Get NN indices and scores.
+    int n = desc1.size().width;
+    cv::Mat score(1, n, CV_32F);
+    cv::Mat idx = argmin_cv_mat_with_score(dmat, 1, score);
+    cv::Mat keep = (score < nn_thres); // return type -- CV_8U '255 or 0'
+
+    cv::Mat idx2 = argmin_cv_mat(dmat, 0);
+    cv::Mat keep_bi(1, n, CV_8U);
+    // ptr로 불러올 때는 C++의 Type을 명시해 주어야 한다. CV_로 시작하는 타입을 < > 사이에 입력시 에러뜸.
+    auto idx2_ptr = idx2.ptr<int>(0);
+    auto keep_bi_ptr = keep_bi.ptr<u_char>(0);
+    for(int i = 0; i<n; i++)
+        *(keep_bi_ptr++) = (i == idx2.at<int>(idx.at<int>(i, 0), 0) ? 255 : 0);
+    keep = min(keep, keep_bi);
+    
+    int k(0);
+    for(int i=0 ;i<n;i++)
+        if(*(keep_bi_ptr++) > 0) k++;
+    
+    keep_bi_ptr = keep_bi.ptr<u_char>(0);
+    cv::Mat m_idx1, m_idx2, m_score;
+    for(int i=0 ;i<n;i++)
+    {
+        if(*(keep_bi_ptr++) > 0)
+        {
+            m_idx1.push_back(i);
+            m_idx2.push_back(idx.at<int>(i, 0));
+            m_score.push_back(score.at<float>(i, 0));
+        }
+    }
+}
+
 
 std::string cv_type2str(int type) {
   std::string r;
@@ -594,6 +754,7 @@ void test_with_magicleap(){
     // cv::imshow("linux", gray_img);
     std::cout << cv_type2str(gray_img.type()) << std::endl;
 }
+
 
 
 } // Namespace NAMU_TEST END
