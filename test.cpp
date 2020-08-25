@@ -169,7 +169,7 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     //      return the coordinates of nonzero value pixels of 'input' Tensor.
     kpts = at::nonzero(kpts); // [n_keypoints, 2]  (y, x)
 
-    std::cout << "kpyts' type is ";
+    std::cout << "kpts' type is ";
     kpts.print();
     std::cout << std::endl;
     auto fkpts = kpts.to(kFloat);
@@ -235,9 +235,9 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     auto conf_ptr   = kpts_nms_conf.ptr<float>(0);
     for(auto iter = kpts_nms.begin(); iter != kpts_nms.end(); iter++)
     {
-        *(xy++) = (float)(*iter).pt.x;
-        *(xy++) = (float)(*iter).pt.y;
-        *(conf_ptr++)   = (float)(*iter).response; 
+        *(xy++) = (float)(*iter).kpt.pt.x;
+        *(xy++) = (float)(*iter).kpt.pt.y;
+        *(conf_ptr++)   = (float)(*iter).kpt.response; 
     }
 
     return desc_nms;
@@ -314,20 +314,25 @@ void SuperPointFrontend::fast_nms
         auto center_conf = confidence.ptr<float>(v) + u;
         if (*center == 1)
         {
-            int r = 2 * d + 1;
-            for(int i=0; i<r; i++)
-            {
-                auto ptr_grid = grid.ptr<char>(v-d+i) + (u-d);
-                auto ptr_conf = confidence.ptr<float>(v-d+i) + (u-d);
-                for(int j=0; j<r; j++)
-                {
-                    if(*center_conf > *ptr_conf)    
-                        *ptr_grid = 0;
-                    ptr_grid++;
-                    ptr_conf++;
-                }
-            }
-            *center = 2; cnt++;
+            // int r = 2 * d + 1;
+            // for(int i=0; i<r; i++)
+            // {
+            //     auto ptr_grid = grid.ptr<char>(v-d+i) + (u-d);
+            //     auto ptr_conf = confidence.ptr<float>(v-d+i) + (u-d);
+            //     for(int j=0; j<r; j++)
+            //     {
+            //         if(*center_conf > *ptr_conf)    
+            //             *ptr_grid = 0;
+            //         ptr_grid++;
+            //         ptr_conf++;
+            //     }
+            // }
+            // *center = 2; cnt++;
+
+            cv::Mat(grid, cv::Rect(cv::Point(u-d, v-d), cv::Point(u+d+1, u+d+1))).setTo(0);
+            *center = 2;
+            cnt++;
+
             // If extract 300 keypoints, it's enough, Break.
             if(cnt >= MAX_KEYPOINT) break;
             kpts_nms.push_back((*iter).kpt);
@@ -505,6 +510,89 @@ void printSection(int n, std::string s)
 {
     std::cout << "\n < TEST Section " << n << " > \n"
                 << "--Test about " << s << "--\n\n";
+}
+
+
+
+cv::Mat VideoStreamer::read_image(const string& path, const cv::Size& img_size)
+{
+    cv::Mat gray_img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    // resampling using pixel area relation
+    // resize(input, output, Size, scale_factor_x, scale_factor_y, interpolation_method)
+    cv::resize(gray_img, gray_img, img_size, 0, 0, cv::INTER_AREA);
+    if(gray_img.empty()){
+        std::cerr << "Error reading image.\n";
+        exit('2');
+    }
+
+    gray_img.convertTo(gray_img, -1);
+    std::cout << gray_img.type() << std::endl;
+
+}
+
+bool VideoStreamer::next_frame(cv::Mat& img)
+{
+    if(current_frame_num >= MAX_FRAME_NUM) return false;
+    if(img_source == input_device::IS_CAMERA)
+    {
+        cap.read(img);
+        cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
+        cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
+        img.convertTo(img, CV_32F);
+        img = img/255.;
+    }
+    else if(img_source == input_device::IS_VIDEO_FILE)
+    {
+        cap >> img;
+        cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
+        cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
+        img.convertTo(img, CV_32F);
+        img = img/255.;
+    }
+    else
+    {
+        std::cerr << "There is no source of image frames!\n";
+        exit(2);
+    }
+    current_frame_num++;
+    return true;
+}
+
+std::string cv_type2str(int type) {
+  std::string r;
+
+  uchar depth = type & CV_MAT_DEPTH_MASK;
+  uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+  switch ( depth ) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+  }
+
+  r += "C";
+  r += (chans+'0');
+
+  return r;
+}
+
+void test_with_magicleap(){
+    cv::namedWindow("linux", cv::WINDOW_NORMAL);
+    cv::Mat gray_img = cv::imread("../Dataset/magicleap.png", cv::IMREAD_GRAYSCALE);
+    if(gray_img.empty()){
+        std::cout << " No Image.\n";
+        exit(1);
+    }
+    gray_img.convertTo(gray_img, CV_32FC1);
+    cv::imshow("linux", gray_img);
+    auto key = cv::waitKey(0);
+    // cv::imshow("linux", gray_img);
+    std::cout << cv_type2str(gray_img.type()) << std::endl;
 }
 
 

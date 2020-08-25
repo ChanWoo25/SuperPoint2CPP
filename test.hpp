@@ -16,8 +16,8 @@ using namespace torch;
 using namespace nn;
 
 void printSection(int n, std::string s);
-
-
+std::string cv_type2str(int type);
+void test_with_magicleap();
 class SuperPoint : public Module {
 public:
     //Constructor
@@ -97,7 +97,7 @@ private:
     cv::Mat desc_nms;
     cv::Mat kpts_nms_loc;
     cv::Mat kpts_nms_conf;
-    std::vector<cv::KeyPoint> kpts_nms;
+    std::vector<KeyPointNode> kpts_nms;
     c10::TensorOptions tensor_opts;
     c10::DeviceType device_type;
     torch::Tensor mProb;
@@ -112,6 +112,64 @@ private:
     bool verbose = 0;
 };
 
+class VideoStreamer{
+private:
+    enum class input_device{
+        IS_CAMERA=0, 
+        IS_VIDEO_FILE=1
+    };
+    input_device img_source;
+    cv::Mat frame;
+    //--- INITIALIZE VIDEOCAPTURE
+    cv::VideoCapture cap;
+    // open the default camera using default API
+    // cap.open(0);
+    // OR advance usage: select any API backend
+    int deviceID = 0;             // 0 = open default camera
+    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
+    int MAX_FRAME_NUM = 1000000;
+    int current_frame_num = 0;
+    cv::Size img_size;
+public:
+    VideoStreamer(){
+        cap.open(deviceID, apiID);
+        if (!cap.isOpened()) {
+            std::cerr << "ERROR! Unable to open camera\n";
+            std::exit(1);
+        }
+        img_source = input_device::IS_CAMERA;
+    }
+    ~VideoStreamer()
+    {
+        // When everything done, release the video capture object
+        cap.release();
+    }
+    VideoStreamer(int cam_id)
+    {
+        deviceID = cam_id;
+        cap.open(deviceID, apiID);
+        if (!cap.isOpened()) {
+            std::cerr << "ERROR! Unable to open camera\n";
+            std::exit(1);
+        }
+        img_source = input_device::IS_CAMERA;
+    }
+    VideoStreamer(const string& filename){
+        cap.open(filename, apiID);
+        if (!cap.isOpened()) {
+            std::cerr << "ERROR! Unable to open camera\n";
+            std::exit(1);
+        }
+        img_source = input_device::IS_VIDEO_FILE;
+    }
+
+    cv::Mat read_image(const string& path, const cv::Size& img_size);
+    // Read a image as grayscale and resize to img_size.
+
+    bool next_frame(cv::Mat& img);
+
+
+};
 cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
 // torch::Tensor NMS(torch::Tensor kpts);
 

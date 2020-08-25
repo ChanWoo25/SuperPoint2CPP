@@ -2,6 +2,7 @@
 
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
 const std::string weight_dir = project_dir + "Weights/superpoint.pt";
+const std::string dataset_dir = project_dir + "Dataset/";
 
 int main(const int argc, const char* argv[])
 {
@@ -74,6 +75,32 @@ int main(const int argc, const char* argv[])
     // cv::Mat sub = cv::Mat(mat, cv::Rect(cv::Point2d(1, 1), cv::Point2d(3, 3)));
     // sub.setTo(0);
     // std::cout << mat << std::endl;
+
+    printSection(6, "read image. [DONE] ");
+    //test_with_magicleap();
+    
+
+    printSection(7, "read video. [DONE] ");
+    // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
+    // while(1){
+    //     cv::Mat frame;
+
+    //     // Capture frame-by-frame
+    //     vs.next_frame(frame);
+    //     // If the frame is empty, break immediately
+    //     if (frame.empty())
+    //         break;
+
+    //     // Display the resulting frame
+
+    //     cv::imshow( "Frame", frame );
+    //     // Press  ESC on keyboard to exit
+    //     char c=(char)cv::waitKey(400);
+    //     if(c==27)
+    //     break;
+    // }
+    // // Closes all the frames
+    // cv::destroyAllWindows();
 
 
 

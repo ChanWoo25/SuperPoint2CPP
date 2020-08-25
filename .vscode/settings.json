@@ -61,6 +61,8 @@
         "variant": "cpp",
         "__bit_reference": "cpp",
         "memory_resource": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "locale": "cpp",
+        "__locale": "cpp"
     }
 }

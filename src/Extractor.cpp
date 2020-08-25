@@ -594,7 +594,7 @@ void SPextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoi
 
     vector<KeyPoint> keypoints;
 
-    Mat desc = SPdetect(model, image, _keypoints, iniThFAST, true, false);
+    Mat desc = SPdetect(model, image, _keypoints, iniThFAST, true);
 
     // Mat kpt_mat(keypoints.size(), 2, CV_32F);
     // for (size_t i = 0; i < keypoints.size(); i++) {
