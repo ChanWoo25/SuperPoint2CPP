@@ -37,7 +37,7 @@ public:
     void display(std::shared_ptr<SuperPoint> net);
 
     // Forward propagation
-    std::vector<torch::Tensor> forward(torch::Tensor x);
+    void forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc);
 
 protected:
     //SHARED ENCODER
@@ -71,8 +71,8 @@ class SuperPointFrontend
 {
 private:
     struct KeyPointNode{
-            cv::KeyPoint kpt;
-            int desc_idx;
+        cv::KeyPoint kpt;
+        int desc_idx;
     };
 
 public:
@@ -80,9 +80,7 @@ public:
     SuperPointFrontend(std::string _weight_dir, bool _use_cuda);
     
 
-    void fast_nms
-    (std::vector<KeyPointNode>& kpts_no_nms, cv::Mat& desc_no_nms,
-     int img_width, int img_height);
+    void fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height);
      
     cv::Mat detect(cv::Mat &img);
     
@@ -93,25 +91,25 @@ public:
     
     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
     
-    void computeDescriptors();
+    void computeDescriptors(cv::Mat& descriptors);
+
+    std::vector<KeyPointNode> kpts_node_nms;
+    std::vector<cv::KeyPoint> kpts_nms;
 
 private:
     std::shared_ptr<SuperPoint> model;
-    cv::Mat desc_nms;
     cv::Mat kpts_nms_loc;
     cv::Mat kpts_nms_conf;
-    std::vector<KeyPointNode> kpts_node_nms;
-    std::vector<cv::KeyPoint> kpts_nms;
     c10::TensorOptions tensor_opts;
     c10::DeviceType device_type;
     torch::Tensor mProb;
     torch::Tensor mDesc;
-    int MAX_KEYPOINT = 300;
+    int MAX_KEYPOINT = 100;
     int nms_border = 8;
     int nms_dist_thres = 4;
     bool use_cuda;
     float nms_dist;
-    float conf_thres;
+    float conf_thres=0.2;
     float nn_thres;
     bool verbose = 0;
 };
@@ -123,7 +121,6 @@ private:
         IS_VIDEO_FILE=1
     };
     input_device img_source;
-    cv::Mat frame;
     //--- INITIALIZE VIDEOCAPTURE
     cv::VideoCapture cap;
     // open the default camera using default API
@@ -133,7 +130,7 @@ private:
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API
     int MAX_FRAME_NUM = 1000000;
     int current_frame_num = 0;
-    cv::Size img_size = {120, 160};
+    cv::Size input_size = {160, 120}; // {Width, Height}
 public:
     VideoStreamer(){
         cap.open(deviceID, apiID);
@@ -167,10 +164,11 @@ public:
         img_source = input_device::IS_VIDEO_FILE;
     }
 
+    cv::Mat img, input;
     cv::Mat read_image(const string& path);
     // Read a image as grayscale and resize to img_size.
 
-    bool next_frame(cv::Mat& img);
+    bool next_frame();
 
 
 };

@@ -63,6 +63,8 @@
         "memory_resource": "cpp",
         "random": "cpp",
         "locale": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "string": "cpp",
+        "__split_buffer": "cpp"
     }
 }

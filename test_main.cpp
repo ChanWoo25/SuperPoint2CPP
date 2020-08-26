@@ -4,7 +4,7 @@ const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
 const std::string weight_dir = project_dir + "Weights/superpoint.pt";
 const std::string dataset_dir = project_dir + "Dataset/";
 
-int main(const int argc, const char* argv[])
+int main(const int argc, char* argv[])
 {
     using namespace NAMU_TEST;
 
@@ -23,19 +23,19 @@ int main(const int argc, const char* argv[])
     /*************************************************************/
     printSection(3, "Understand Forward procedure. [DONE]");
 
-    auto tensor_options = torch::TensorOptions()
-                            .dtype(torch::kFloat32)
-                            .layout(torch::kStrided)
-                            .device(c10::DeviceType(torch::kCUDA))
-                            .requires_grad(false);
+    // auto tensor_options = torch::TensorOptions()
+    //                         .dtype(torch::kFloat32)
+    //                         .layout(torch::kStrided)
+    //                         .device(c10::DeviceType(torch::kCUDA))
+    //                         .requires_grad(false);
 
-    cv::Mat cv_mat = cv::Mat::eye(3,3,CV_32F);
-    torch::Tensor tensor = torch::zeros({3, 3}, torch::kF32);
+    // cv::Mat cv_mat = cv::Mat::eye(3,3,CV_32F);
+    // torch::Tensor tensor = torch::zeros({3, 3}, torch::kF32);
 
-    std::memcpy(tensor.data_ptr(), cv_mat.data, sizeof(float)*tensor.numel());
+    // std::memcpy(tensor.data_ptr(), cv_mat.data, sizeof(float)*tensor.numel());
 
-    std::cout << cv_mat << std::endl;
-    std::cout << tensor << std::endl;
+    // std::cout << cv_mat << std::endl;
+    // std::cout << tensor << std::endl;
 
     // cv::Mat key(5 , 2, CV_32FC1, 1);
     // cv::Mat val(5 , 1, CV_32FC1, 2);
@@ -97,38 +97,57 @@ int main(const int argc, const char* argv[])
     //     }
     
     // std::cout << cv::max(m1, m2) << std::endl;
-    int A[] = {1, 2, 3, 4, 5, 6};
-    cv::Mat a(2, 3, CV_32S, A);
-    std::cout << a << "\n\n";
+    
+    printSection(8, "CV type check. [DONE] ");
+    // int A[] = {1, 2, 3, 4, 5, 6};
+    // cv::Mat a(2, 3, CV_32S, A);
+    // std::cout << a << "\n\n";
 
-    cv::Mat b = (a <= 3);
-    std::cout << b << "\n\n";
-    std::cout << (b.type() == CV_8U) << "\n\n";
+    // cv::Mat b = (a <= 3);
+    // std::cout << b << "\n\n";
+    // std::cout << (b.type() == CV_8U) << "\n\n";
+    
+    int ms;
+    if(argc == 2)
+    {   
+        char* a = argv[1];
+        ms = std::atoi(a);
+    }
+    else ms = 200;
+    std::cout << "Frame rate is " << ms << "ms.\n";
+    
+    cv::namedWindow("superpoint", cv::WINDOW_AUTOSIZE);
 
-    cv::namedWindow("superpoint");
-
-    VideoStreamer vs("../Dataset/nyu_snippet.mp4");
+    //VideoStreamer vs("../Dataset/nyu_snippet.mp4");
+    VideoStreamer vs(0);
     SuperPointFrontend SPF(weight_dir, torch::cuda::is_available());
-
-    while(1){
-        cv::Mat frame;
-
+    std::cout << "VC created, SuperpointFrontend Constructed.\n";
+    
+    int idx=1;
+    while(idx++){
         // Capture frame-by-frame
-        vs.next_frame(frame);
-        // If the frame is empty, break immediately
-        if (frame.empty())
-            break;
-        auto descriptor = SPF.detect(frame);
-        SPF.computeDescriptors();
+        // Image's size is [640 x 480]
+        if(!vs.next_frame()) { std::cout << "main -- Video End\n"; break; }
 
+
+        auto start = std::chrono::system_clock::now();
+        auto descriptors = SPF.detect(vs.input);
+        auto end = std::chrono::system_clock::now();
+        std::chrono::milliseconds mill  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        
+        
+        //SPF.computeDescriptors(desciptors);
+        std::cout << idx << "-th n_keypoint: " << SPF.kpts_nms.size()
+                << " - Processing time: " << mill.count() << "ms\n";
+        for(auto iter = SPF.kpts_nms.begin(); iter != SPF.kpts_nms.end(); iter++)
+            cv::circle(vs.img, (*iter).pt * 4, 3, cv::Scalar(0, 0, 255), 2);
 
         // Display the resulting frame
+        cv::imshow( "superpoint", vs.img );
 
-        cv::imshow( "superpoint", frame );
         // Press  ESC on keyboard to exit
-        char c=(char)cv::waitKey(300);
-        if(c==27)
-        break;
+        char c = (char)cv::waitKey(ms);
+        if(c==27){ break; }
     }
     // Closes all the frames
     cv::destroyAllWindows();

@@ -158,9 +158,10 @@ SuperPoint::SuperPoint()
     convDb = register_module("convDb", Conv2d(Conv2dOptions(c5, d1, 1).stride(1).padding(0)));
 }
 
-std::vector<Tensor> SuperPoint::forward(torch::Tensor x)
+void SuperPoint::forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc)
 {
     //SHARED ENCODER
+    std::cout << "\nSHARED - ";
     x = relu(conv1a->forward(x));
     x = relu(conv1b->forward(x));
     x = max_pool2d(x, 2, 2);
@@ -177,31 +178,35 @@ std::vector<Tensor> SuperPoint::forward(torch::Tensor x)
     x = relu(conv4b->forward(x));
 
     //DETECTOR
+    std::cout << "DETECTOR - ";
     auto cPa = relu(convPa->forward(x));
     auto semi = convPb->forward(cPa); // [B, 65, H/8, W/8]
 
     //DESCRIPTOR
+    std::cout << "DESCRIPTOR - ";
     auto cDa = relu(convDa->forward(x));
     auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
 
     auto dn = norm(desc, 2, 1);
     desc = desc.div(unsqueeze(dn, 1));
 
+    std::cout << "POST - ";
     semi = softmax(semi, 1);
     semi = semi.slice(1, 0, 64);
     semi = semi.permute({0, 2, 3, 1}); // [B, H/8, W/8, 64]
 
     int Hc = semi.size(1);
     int Wc = semi.size(2);
+    std::cout << "VIEW - ";
     semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
     semi = semi.permute({0, 1, 3, 2, 4});
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8}); // [B, H, W]
 
-    std::vector<Tensor> ret;
-    ret.push_back(semi);
-    ret.push_back(desc);
+    std::cout << "COPY - ";
+    Prob = semi;
+    Desc = desc;
 
-    return ret;
+    std::cout << "END - ";
 }
 
 void display()
@@ -262,25 +267,25 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
 
     auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, tensor_opts);
     x /= 255;
-    auto out = model->forward(x);
-    auto prob = mProb = out[0].squeeze(0); // [H, W]
-    auto desc = mDesc = out[1];            // [1, 256, H/8, W/8]
-
+    //std::cout << "Successfully get bolb image.\n";
+    torch::Tensor prob, desc;
+    model->forward(x, prob, desc);
+    prob = prob.squeeze(0);
+    mProb = prob.clone();// [H, W] [120, 160]
+    mDesc = desc.clone();// [1, 256, H/8, W/8]
+    //std::cout << "Successfully forward image.\n";
     // Nonzero인 좌표를 Tensor로 저장.
     // [H, W]에서 Threshold 이상인 픽셀은 1, otherise 0.
+    //std::cout << prob << std::endl;
     auto kpts = (prob > conf_thres);
-    
     //  at::nonzero(at::Tensor input)
     //      return the coordinates of nonzero value pixels of 'input' Tensor.
     kpts = at::nonzero(kpts); // [n_keypoints, 2]  (y, x)
 
-    std::cout << "kpts' type is ";
-    kpts.print();
-    std::cout << std::endl;
     auto fkpts = kpts.to(kFloat);
 
     auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);   // [1, 1, n_keypoints, 2]
-    
+
     //  Tensor.slice is the alternative function of Python's Slicing syntex. 
     //  and quite similar for using.
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / prob.size(1) - 1; // x
@@ -301,10 +306,11 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     //  grid[0][0] 에는 keypoints 개수만큼의 (x, y)좌표가 들어있다.
     desc = at::grid_sampler(desc, grid, 0, 0, false); // [1, 256, 1, n_keypoints]       //CHANGED
     desc = desc.squeeze(0).squeeze(1);                // [256, n_keypoints]
+    //std::cout << "Successfully grid sample.\n";
 
     // normalize to dim 1 with 2-Norm.
     // 각 키포인트에 대해서 Normalize.
-    auto dn = norm(desc, 2, 1);        // [256, 1]
+    auto dn = norm(desc, 2, 1);        // [256]
     desc = desc.div(unsqueeze(dn, 1)); // [256, n_keypoints]
 
     desc = desc.transpose(0, 1).contiguous(); // [n_keypoints, 256]
@@ -315,79 +321,91 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
 
     //  Convert descriptor 
     //  From at::Tensor To cv::Mat
-    auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [n_keypoints, 256]
-    //cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
-    cv::Mat desc_no_nms(desc_size, CV_32F);
-    std::memcpy(desc.data_ptr(), desc_no_nms.data, sizeof(float)*desc.numel());
+    auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [256, n_keypoints]
+    int n_keypoints = desc.size(0);
+    cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
+    //cv::Mat desc_no_nms(desc_size, CV_32F);
+    //std::memcpy(desc.data_ptr(), desc_no_nms.data, sizeof(float) * desc.numel());
 
     // Convert Keypoint
     // From torch::Tensor   kpts(=keypoints)
     // To   cv::KeyPoint    keypoints_no_nms
-    std::vector<KeyPointNode> kpts_no_nms;
-    for (int i = 0; i < kpts.size(0); i++)
+    kpts_node_nms.clear();
+    for (int i = 0; i < n_keypoints; i++)
     {
         float response = prob[kpts[i][0]][kpts[i][1]].item<float>();
-        kpts_no_nms.push_back({cv::KeyPoint(kpts[i][1].item<float>(), kpts[i][0].item<float>(), response), i});
+        cv::KeyPoint kpt(kpts[i][1].item<float>(), kpts[i][0].item<float>(), 4, -1, response);
+        kpts_node_nms.push_back({kpt, i});
     }
 
-    
-    fast_nms(kpts_no_nms, desc_nms, img.cols, img.rows);
+    cv::Mat desc_nms;
+    fast_nms(desc_no_nms, desc_nms, img.cols, img.rows);
 
-    // Empty cv::Mat that will update.
-    kpts_nms_loc.create(kpts_node_nms.size(), 2, CV_32F); 
-    kpts_nms_conf.create(kpts_node_nms.size(), 1, CV_32F); 
-    auto xy         = kpts_nms_loc.ptr<float>(0);
-    auto conf_ptr   = kpts_nms_conf.ptr<float>(0);
-    for(auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
-    {
-        *(xy++) = (float)(*iter).kpt.pt.x;
-        *(xy++) = (float)(*iter).kpt.pt.y;
-        *(conf_ptr++)   = (float)(*iter).kpt.response; 
-    }
+    /*지금은 필요없음
+        // Empty cv::Mat that will update.
+        kpts_nms_loc.create(kpts_node_nms.size(), 2, CV_32F); 
+        kpts_nms_conf.create(kpts_node_nms.size(), 1, CV_32F); 
+        auto xy         = kpts_nms_loc.ptr<float>(0);
+        auto conf_ptr   = kpts_nms_conf.ptr<float>(0);
+        std::cout << (d_i++) << std::endl;
 
+        for(auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
+        {
+            *(xy++) = (float)(*iter).kpt.pt.x;
+            *(xy++) = (float)(*iter).kpt.pt.y;
+            *(conf_ptr++)   = (float)(*iter).kpt.response; 
+        }
+        std::cout << (d_i++) << std::endl;
+    */
+    mProb.reset();
+    mDesc.reset();
     return desc_nms;
 }
 
-void SuperPointFrontend::fast_nms
-    (std::vector<KeyPointNode>& kpts_no_nms, cv::Mat& desc_no_nms,
-     int img_width, int img_height)
+void SuperPointFrontend::fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height)
 {
+    //std::cout << "desc_no_nms Type :" << desc_no_nms.size() << std::endl;
+
     // kpys_no_nms: The keypoints' vectorsorted by conf value
     // Empty cv::Mat that will update.
-    auto ptr = *kpts_no_nms.begin();
-    // Sorting keypoints by reference value.
+    auto ptr = *kpts_node_nms.begin();
 
-    
+    // Sorting keypoints by reference value.
     std::sort(kpts_node_nms.begin(), kpts_node_nms.end(), 
             [](KeyPointNode a, KeyPointNode b) -> bool{ return a.kpt.response > b.kpt.response; });
     
-    cv::Mat kpt_mat(kpts_no_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
-    cv::Mat conf(kpts_no_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
+    // std::cout << "<response order>" << std::endl;
+    // for(int i=0; i<5;i++)
+    //     std::cout << kpts_node_nms[i].kpt.response << std::endl;
+
+    // cv::Mat kpt_mat(kpts_node_nms.size(), 2, CV_32F);    //  [n_keypoints, 2]
+    // cv::Mat conf(kpts_node_nms.size(), 1, CV_32F);       //  [n_keypoints, 1]
     
-    auto xy         = kpt_mat.ptr<float>(0);
-    auto conf_ptr   = conf.ptr<float>(0);
+    // auto xy         = kpt_mat.ptr<float>(0);
+    // auto conf_ptr   = conf.ptr<float>(0);
 
-    for(auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
-    {
-        *(xy++) = (float)(*iter).kpt.pt.x;
-        *(xy++) = (float)(*iter).kpt.pt.y;
-        *(conf_ptr++)   = (float)(*iter).kpt.response; 
-    }
+    // for(auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
+    // {
+    //     *(xy++) = (float)(*iter).kpt.pt.x;
+    //     *(xy++) = (float)(*iter).kpt.pt.y;
+    //     *(conf_ptr++)   = (float)(*iter).kpt.response; 
+    // }
+    // std::cout << (d_i++) << std::endl;
 
 
-    cv::Mat grid = cv::Mat(cv::Size(img_width, img_height), CV_8UC1, cv::Scalar(0));
-    cv::Mat inds = cv::Mat(cv::Size(img_width, img_height), CV_16UC1, cv::Scalar(0));
-    cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32FC1, cv::Scalar(0));
+    cv::Mat grid = cv::Mat(cv::Size(img_width, img_height), CV_8U, cv::Scalar(0));
+    //cv::Mat inds = cv::Mat(cv::Size(img_width, img_height), CV_16U, cv::Scalar(0));
+    //cv::Mat confidence = cv::Mat(cv::Size(img_width, img_height), CV_32F, cv::Scalar(0));
 
     int nms_idx(0);
-    for (auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
+    for (auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
     {
-        int uu = (int)(*iter).kpt.pt.x;
-        int vv = (int)(*iter).kpt.pt.y;
+        int col = (int)(*iter).kpt.pt.x;
+        int row = (int)(*iter).kpt.pt.y;
 
-        grid.at<char>(vv, uu) = 1;
-        inds.at<unsigned short>(vv, uu) = (nms_idx++);
-        confidence.at<float>(vv, uu) = (*iter).kpt.response;
+        grid.at<char>(row, col) = (char)1;
+        //inds.at<unsigned short>(vv, uu) = (nms_idx++);
+        //confidence.at<float>(vv, uu) = (*iter).kpt.response;
     }
 
     // Padding grid Mat.
@@ -399,49 +417,37 @@ void SuperPointFrontend::fast_nms
     cv::copyMakeBorder(grid, grid, d, d, d, d, cv::BORDER_CONSTANT, 0);
 
     // Process Non-Maximum Suppression from highest confidence Keypoint.
-    // find Keypoints in range of nms_dist_thres and set 0. 
-    
-    cv::Mat desc_nms;
-    int cnt = 0;
+    // find Keypoints in range of nms_dist_thres and set 0.
 
     // 하나의 for문으로 해결하기 위해 노력했다.
     // 허락된 Boundary 안쪽의 높은 Confidence를 가진 Keypoint부터 시작하여
     // 자기 주변 distance 안의 자신보다 낮은 Confidence를 지닌 Keypoint를 제거한다.
     // Input은 함수 인자로 받지만, output은 SuprpointFrontend의 멤버 변수로 저장한다.
-    for (auto iter = kpts_no_nms.begin(); iter != kpts_no_nms.end(); iter++)
+    int cnt = 0;
+    kpts_nms.clear();
+    for (auto iter = kpts_node_nms.begin(); iter != kpts_node_nms.end(); iter++)
     {
-        int u = (int)(*iter).kpt.pt.x + d;
-        int v = (int)(*iter).kpt.pt.y + d;
-        if(u < b | v < b | u > (img_width - b) | v > (img_height - b))
+        int col = (int)(*iter).kpt.pt.x + d;
+        int row = (int)(*iter).kpt.pt.y + d;
+        if(col <= b | row <= b | col >= (img_width - d) | row >= (img_height - d))
             continue;
         
-        auto center = grid.ptr<char>(v) + u;
-        auto center_conf = confidence.ptr<float>(v) + u;
+        auto center = grid.ptr<char>(row) + col;
+        //auto center_conf = confidence.ptr<float>(v) + u;
         if (*center == 1)
         {
-            // int r = 2 * d + 1;
-            // for(int i=0; i<r; i++)
-            // {
-            //     auto ptr_grid = grid.ptr<char>(v-d+i) + (u-d);
-            //     auto ptr_conf = confidence.ptr<float>(v-d+i) + (u-d);
-            //     for(int j=0; j<r; j++)
-            //     {
-            //         if(*center_conf > *ptr_conf)    
-            //             *ptr_grid = 0;
-            //         ptr_grid++;
-            //         ptr_conf++;
-            //     }
-            // }
-            // *center = 2; cnt++;
-
-            cv::Mat(grid, cv::Rect(cv::Point(u-d, v-d), cv::Point(u+d+1, u+d+1))).setTo(0);
-            *center = 2;
+            cv::Mat sub(grid, cv::Rect(cv::Point(col-d, row-d), cv::Point(col+d, row+d)));
+            sub.setTo(0);
             cnt++;
 
             // If extract 300 keypoints, it's enough, Break.
             if(cnt >= MAX_KEYPOINT) break;
             kpts_nms.push_back((*iter).kpt);
-            desc_nms.push_back(desc_no_nms.row((*iter).desc_idx));
+
+            //desc_nms.push_back(desc_no_nms.row((*iter).desc_idx));
+            auto dec = desc_no_nms.row((*iter).desc_idx);
+            desc_nms.push_back(dec);
+            //std::cout << desc_nms.size() << std::endl;
         }
         else{ continue; }
     }
@@ -488,7 +494,7 @@ void SuperPointFrontend::getKeyPoints(float threshold, int iniX, int maxX, int i
     }
 }
 
-void SuperPointFrontend::computeDescriptors() //const std::vector<cv::KeyPoint> &kpts_nms, cv::Mat &desc_nms
+void SuperPointFrontend::computeDescriptors(cv::Mat& descriptors) //const std::vector<cv::KeyPoint> &kpts_nms, cv::Mat &desc_nms
 {
     cv::Mat kpt_mat(kpts_nms.size(), 2, CV_32F); // [n_keypoints, 2]  (y, x)
 
@@ -515,9 +521,7 @@ void SuperPointFrontend::computeDescriptors() //const std::vector<cv::KeyPoint> 
     desc = desc.transpose(0, 1).contiguous(); // [n_keypoints, 256]
     desc = desc.to(kCPU);
 
-    cv::Mat desc_mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
-
-    desc_nms = desc_mat.clone();
+    descriptors = cv::Mat(cv::Size(desc.size(1), desc.size(0)), CV_32FC1, desc.data_ptr<float>());
 }
 
 void SuperPointFrontend::NMS2
@@ -614,7 +618,7 @@ void SuperPointFrontend::NMS2
 
 void printSection(int n, std::string s)
 {
-    std::cout << "\n < TEST Section " << n << " > \n"
+    std::cout << " < TEST Section " << n << " > \n"
                 << "--Test about " << s << "--\n\n";
 }
 
@@ -625,7 +629,7 @@ cv::Mat VideoStreamer::read_image(const string& path)
     cv::Mat gray_img = cv::imread(path, cv::IMREAD_GRAYSCALE);
     // resampling using pixel area relation
     // resize(input, output, Size, scale_factor_x, scale_factor_y, interpolation_method)
-    cv::resize(gray_img, gray_img, img_size, 0, 0, cv::INTER_AREA);
+    cv::resize(gray_img, gray_img, input_size, 0, 0, cv::INTER_AREA);
     if(gray_img.empty()){
         std::cerr << "Error reading image.\n";
         exit('2');
@@ -634,7 +638,7 @@ cv::Mat VideoStreamer::read_image(const string& path)
     return gray_img/255.;
 }
 
-bool VideoStreamer::next_frame(cv::Mat& img)
+bool VideoStreamer::next_frame()
 {
     if(current_frame_num >= MAX_FRAME_NUM) return false;
     if(img_source == input_device::IS_CAMERA)
@@ -644,23 +648,23 @@ bool VideoStreamer::next_frame(cv::Mat& img)
             std::cout << "No Image.\n";
             return false;
         }
-        cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
-        cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
-        img.convertTo(img, CV_32F);
-        img = img/255.;
+        input = img.clone();
+        cv::resize(input, input, input_size, 1., 1., cv::INTER_AREA);
+        cv::cvtColor(input, input, cv::COLOR_RGB2GRAY);
+        input.convertTo(input, CV_32F);
     }
     else if(img_source == input_device::IS_VIDEO_FILE)
     {
-        cap >> img;
-        if(img.empty())
+        if(!cap.read(img))
         {
             std::cout << "No Image.\n";
             return false;
         }
-        cv::resize(img, img, img_size, 1., 1., cv::INTER_AREA);
-        cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);
-        img.convertTo(img, CV_32F);
-        img = img/255.;
+        
+        input = img.clone();
+        cv::resize(input, input, input_size, 1., 1., cv::INTER_AREA);
+        cv::cvtColor(input, input, cv::COLOR_RGB2GRAY);
+        input.convertTo(input, CV_32F);
     }
     else
     {
