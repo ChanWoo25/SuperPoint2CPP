@@ -1,12 +1,20 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(SuperPointCpp)
+cmake_minimum_required(VERSION 3.8)
+
+project(
+SuperPointCpp   
+LANGUAGES    CXX
+VERSION     20.08
+)
 
 
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/leecw/libtorch")
 find_package(Torch REQUIRED)
 find_package(OpenCV 3.0 QUIET)
+
 if(OpenCV_FOUND)
-message(STATUS "OpenCV >= 3.0 found.")
+    message(STATUS "OpenCV >= 3.0 found.")
+else()
+    message(STATUS "OpenCV cannot be found.")
 endif()
 
 message(STATUS ${PROJECT_SOURCE_DIR})

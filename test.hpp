@@ -131,6 +131,8 @@ private:
     int MAX_FRAME_NUM = 1000000;
     int current_frame_num = 0;
     cv::Size input_size = {160, 120}; // {Width, Height}
+    cv::Size image_size;
+    
 public:
     VideoStreamer(){
         cap.open(deviceID, apiID);
@@ -154,6 +156,12 @@ public:
             std::exit(1);
         }
         img_source = input_device::IS_CAMERA;
+        cv::Mat test_grab;
+        while(!cap.read(test_grab));
+        image_size = test_grab.size();
+        W_scale = (float)image_size.width / (float)input_size.width;
+        H_scale = (float)image_size.height / (float)input_size.height;
+        
     }
     VideoStreamer(const string& filename){
         cap.open(filename, apiID);
@@ -162,8 +170,13 @@ public:
             std::exit(1);
         }
         img_source = input_device::IS_VIDEO_FILE;
+        cv::Mat test_grab;
+        while(!cap.read(test_grab));
+        image_size = test_grab.size();
+        W_scale = (float)image_size.width / (float)input_size.width;
+        H_scale = (float)image_size.height / (float)input_size.height;
     }
-
+    float H_scale, W_scale;
     cv::Mat img, input;
     cv::Mat read_image(const string& path);
     // Read a image as grayscale and resize to img_size.

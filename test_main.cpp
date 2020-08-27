@@ -139,8 +139,12 @@ int main(const int argc, char* argv[])
         //SPF.computeDescriptors(desciptors);
         std::cout << idx << "-th n_keypoint: " << SPF.kpts_nms.size()
                 << " - Processing time: " << mill.count() << "ms\n";
+        float x_scale(vs.W_scale), y_scale(vs.H_scale);
         for(auto iter = SPF.kpts_nms.begin(); iter != SPF.kpts_nms.end(); iter++)
-            cv::circle(vs.img, (*iter).pt * 4, 3, cv::Scalar(0, 0, 255), 2);
+        {
+            float X((*iter).pt.x), Y((*iter).pt.y);
+            cv::circle(vs.img, cv::Point(int(X*x_scale), int(Y*y_scale)), 3, cv::Scalar(0, 0, 255), 2);
+        }
 
         // Display the resulting frame
         cv::imshow( "superpoint", vs.img );
