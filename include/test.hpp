@@ -109,7 +109,7 @@ private:
     int nms_dist_thres = 4;
     bool use_cuda;
     float nms_dist;
-    float conf_thres=0.2;
+    float conf_thres=0.1;
     float nn_thres;
     bool verbose = 0;
 };

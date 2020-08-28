@@ -1,14 +1,15 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.12...3.18)
 
 project(
 SuperPointCpp   
-LANGUAGES    CXX
-VERSION     20.08
+VERSION         20.08
+LANGUAGES       CXX
+DESCRIPTION     "C++ Implementation of Superpoint."
 )
 
 
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/leecw/libtorch")
-find_package(Torch REQUIRED)
+find_package(Torch REQUIRED QUIET)
 find_package(OpenCV 3.0 QUIET)
 
 if(OpenCV_FOUND)
@@ -17,31 +18,21 @@ else()
     message(STATUS "OpenCV cannot be found.")
 endif()
 
-message(STATUS ${PROJECT_SOURCE_DIR})
-message(STATUS ${CMAKE_SOURCE_DIR})
-#message(STATUS ${TORCH_LIBRARIES})
+add_subdirectory(src)
 
-# TEST
-add_executable(test test_main.cpp test.cpp)
-target_compile_features(test PRIVATE cxx_std_14)
-target_include_directories(test
-PUBLIC 
-${PROJECT_SOURCE_DIR}/include
-)
-target_link_libraries(test 
+
+add_executable(main test_main.cpp)
+target_compile_features(main PUBLIC cxx_std_14)
+target_link_libraries(main PUBLIC 
+superpoint
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}
 )
+set_target_properties(main PROPERTIES
+RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
+)
 
 
-# SUPERPOINT
-add_executable(SuperPoint main.cpp ./src/SuperPoint.cpp ./src/Extractor.cpp)
-target_compile_features(SuperPoint PRIVATE cxx_std_14)
-target_include_directories(SuperPoint
-PUBLIC 
-${PROJECT_SOURCE_DIR}/include
-)
-target_link_libraries(SuperPoint 
-${TORCH_LIBRARIES}
-${OpenCV_LIBS}
-)
+# target_include_directories(main
+# PUBLIC  ${PROJECT_SOURCE_DIR}/include
+# )

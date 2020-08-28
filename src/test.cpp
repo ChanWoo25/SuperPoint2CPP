@@ -1,4 +1,4 @@
-#include "test.hpp"
+#include <test.hpp>
 
 namespace NAMU_TEST
 {

@@ -1,4 +1,0 @@
-/home/leecw/Reps/SuperPoint2CPP/CMakeFiles/rebuild_cache.dir
-/home/leecw/Reps/SuperPoint2CPP/CMakeFiles/test.dir
-/home/leecw/Reps/SuperPoint2CPP/CMakeFiles/SuperPoint.dir
-/home/leecw/Reps/SuperPoint2CPP/CMakeFiles/edit_cache.dir
