@@ -65,6 +65,9 @@
         "locale": "cpp",
         "__locale": "cpp",
         "string": "cpp",
-        "__split_buffer": "cpp"
+        "__split_buffer": "cpp",
+        "csignal": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp"
     }
 }

@@ -223,10 +223,20 @@ void SPDetector::detect(cv::Mat &img)
 
 }
 
-
+/**
+ * @brief 하나의 Cell 패치에서 디텍션 수행. 결과는 keypoints로 반환
+ * 
+ * @param threshold 
+ * @param iniX 
+ * @param maxX 
+ * @param iniY 
+ * @param maxY 
+ * @param keypoints : 결과 vector<Keypoitn> 반환
+ * @param nms 
+ */
 void SPDetector::getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms)
 {
-    auto prob = mProb.slice(0, iniY, maxY).slice(1, iniX, maxX);  // [h, w]
+    auto prob = mProb.slice(0, iniY, maxY).slice(1, iniX, maxX);  /* 패치 크기만큼 Superpoint후의 mProb에서 잘라 가져옴. */
     auto kpts = (prob > threshold);
     kpts = nonzero(kpts);  // [n_keypoints, 2]  (y, x)
 

@@ -18,6 +18,7 @@
 * You should have received a copy of the GNU General Public License
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
+
 /**
 * Software License Agreement (BSD License)
 *
@@ -76,6 +77,14 @@ const int EDGE_THRESHOLD = 19;
 
 const float factorPI = (float)(CV_PI/180.f); // 3.14~ / 180도
 
+/**
+ * @brief Keypoint가 충분히 나오지 않은 ExtractorNode를 4분할한다. 그리고 각 영역에 해당하는 Keypoint 넘겨준다.
+ * 
+ * @param n1 1/4 크기의 ExtractorNode.
+ * @param n2 1/4 크기의 ExtractorNode.
+ * @param n3 1/4 크기의 ExtractorNode.
+ * @param n4 1/4 크기의 ExtractorNode.
+ */
 void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNode &n3, ExtractorNode &n4)
 {
     const int halfX = ceil(static_cast<float>(UR.x-UL.x)/2);
@@ -141,7 +150,19 @@ void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNo
 
 }
 
-
+/**
+ * @brief Construct a new SPextractor::SPextractor object
+ * 
+ * @details 
+ *  1. Superpoint model load @n
+ *  2. 
+ * 
+ * @param _nfeatures -- 하나의 이미지에서 추출되어야 하는 바람직한 Feature의 개수
+ * @param _scaleFactor -- 이미지 피라미드 level 증가에 따라 곱해질 Scale factor.
+ * @param _nlevels -- 이미지 피라미드 level, scale up을 몇 번 할 것인지.
+ * @param _iniThFAST -- Fast detection시에 초기화할 Threshold
+ * @param _minThFAST -- Fast detection시에 '최소' Threshold
+ */
 SPextractor::SPextractor(int _nfeatures, float _scaleFactor, int _nlevels,
          float _iniThFAST, float _minThFAST):
     nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
@@ -186,11 +207,27 @@ SPextractor::SPextractor(int _nfeatures, float _scaleFactor, int _nlevels,
 
 }
 
-
+/**
+ * const int PATCH_SIZE = 31;
+ * const int HALF_PATCH_SIZE = 15;
+ * const int EDGE_THRESHOLD = 19;
+ * @brief ComputeKeyPointsOctTree() 함수 안에서 각 Image Pyramid 레벨에서 keypoint detection이 이루어진 후 한번씩 호출.
+ * @details 
+ * 1. 
+ * 
+ * @param vToDistributeKeys : 입력으로 들어오는 Keypoint set.
+ * @param minX 
+ * @param maxX 
+ * @param minY 
+ * @param maxY 
+ * @param N : image pyramid[level]에서 나올수 있는 Feature의 개수
+ * @param level : 현재 함수가 호출되었을 때의 image pyramid level.
+ * @return vector<cv::KeyPoint> 
+ */
 vector<cv::KeyPoint> SPextractor::DistributeOctTree(const vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
                                        const int &maxX, const int &minY, const int &maxY, const int &N, const int &level)
 {
-    // Compute how many initial nodes   
+    // 1. Compute how many initial nodes   
     const int nIni = round(static_cast<float>(maxX-minX)/(maxY-minY));
 
     const float hX = static_cast<float>(maxX-minX)/nIni;
@@ -413,7 +450,15 @@ vector<cv::KeyPoint> SPextractor::DistributeOctTree(const vector<cv::KeyPoint>& 
     return vResultKeys;
 }
 
-
+/**
+ * @brief SPextractor::operator()에서 ComputePyramid 다음에 호출, 이미지 피라미드를 통해 균일함까지 고려한 최종 Keypoint들을 각각의 descriptor와 반환한다. 
+ * @details
+ * 1. nfeatures*10개 keypoints가지는 vToDistributeKeys 벡터 먼저 준비
+ * 2. image pyramid의 각 레벨에서 30*30 크기의 셀로 나눠 FAST진행. -> Superpoint에 적합한 Cell 크기 찾을 필요 있음.
+ * 
+ * @param allKeypoints 
+ * @param _desc 
+ */
 void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoints, cv::Mat &_desc)
 {
     allKeypoints.resize(nlevels);
@@ -422,15 +467,16 @@ void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoint
 
     const float W = 30;
 
+    /// 2. image pyramid의 각 레벨에서 30*30 크기의 셀로 나눠 FAST진행.
     for (int level = 0; level < nlevels; ++level)
     {
         SPDetector detector(model);
-        detector.detect(mvImagePyramid[level]);
+        detector.detect(mvImagePyramid[level]); /* 각 Pyramid에서 detection 진행. */
 
         const int minBorderX = EDGE_THRESHOLD-3;
-        const int minBorderY = minBorderX;
-        const int maxBorderX = mvImagePyramid[level].cols-EDGE_THRESHOLD+3;
-        const int maxBorderY = mvImagePyramid[level].rows-EDGE_THRESHOLD+3;
+        const int minBorderY = EDGE_THRESHOLD-3;
+        const int maxBorderX = mvImagePyramid[level].cols-(EDGE_THRESHOLD-3);
+        const int maxBorderY = mvImagePyramid[level].rows-(EDGE_THRESHOLD-3);
 
         vector<cv::KeyPoint> vToDistributeKeys;
         vToDistributeKeys.reserve(nfeatures*10);
@@ -455,9 +501,9 @@ void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoint
 
             for(int j=0; j<nCols; j++)
             {
-                const float iniX =minBorderX+j*wCell;
+                const float iniX = minBorderX+j*wCell;
                 float maxX = iniX+wCell+6;
-                if(iniX>=maxBorderX-6)
+                if(iniX >= maxBorderX-3) /* '6->3' by Chan may problem */
                     continue;
                 if(maxX>maxBorderX)
                     maxX = maxBorderX;
@@ -467,6 +513,7 @@ void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoint
                 //      vKeysCell,iniThFAST,true);
                 detector.getKeyPoints(iniThFAST, iniX, maxX, iniY, maxY, vKeysCell, true);
 
+                /// 만약 코너가 하나도 검출 안되면, Threshold낮춰서 다시 진행.
                 if(vKeysCell.empty())
                 {
                     // FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
@@ -487,6 +534,7 @@ void SPextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoint
             }
         }
 
+        /// 3
         vector<KeyPoint> & keypoints = allKeypoints[level];
         keypoints.reserve(nfeatures);
 

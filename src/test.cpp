@@ -161,7 +161,7 @@ SuperPoint::SuperPoint()
 void SuperPoint::forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc)
 {
     //SHARED ENCODER
-    std::cout << "\nSHARED - ";
+    //std::cout << "\nSHARED - ";
     x = relu(conv1a->forward(x));
     x = relu(conv1b->forward(x));
     x = max_pool2d(x, 2, 2);
@@ -178,35 +178,35 @@ void SuperPoint::forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& De
     x = relu(conv4b->forward(x));
 
     //DETECTOR
-    std::cout << "DETECTOR - ";
+    //std::cout << "DETECTOR - ";
     auto cPa = relu(convPa->forward(x));
     auto semi = convPb->forward(cPa); // [B, 65, H/8, W/8]
 
     //DESCRIPTOR
-    std::cout << "DESCRIPTOR - ";
+    //std::cout << "DESCRIPTOR - ";
     auto cDa = relu(convDa->forward(x));
     auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
 
     auto dn = norm(desc, 2, 1);
     desc = desc.div(unsqueeze(dn, 1));
 
-    std::cout << "POST - ";
+    //std::cout << "POST - ";
     semi = softmax(semi, 1);
     semi = semi.slice(1, 0, 64);
     semi = semi.permute({0, 2, 3, 1}); // [B, H/8, W/8, 64]
 
     int Hc = semi.size(1);
     int Wc = semi.size(2);
-    std::cout << "VIEW - ";
+    //std::cout << "VIEW - ";
     semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
     semi = semi.permute({0, 1, 3, 2, 4});
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8}); // [B, H, W]
 
-    std::cout << "COPY - ";
+    //std::cout << "COPY - ";
     Prob = semi;
     Desc = desc;
 
-    std::cout << "END - ";
+    //std::cout << "END - ";
 }
 
 void display()
@@ -322,7 +322,8 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
     //  Convert descriptor 
     //  From at::Tensor To cv::Mat
     auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [256, n_keypoints]
-    int n_keypoints = desc.size(0);
+    int n_keypoints = desc.size(0); 
+    std::cout << "Before nms: " << n_keypoints << std::endl;
     cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());
     //cv::Mat desc_no_nms(desc_size, CV_32F);
     //std::memcpy(desc.data_ptr(), desc_no_nms.data, sizeof(float) * desc.numel());
@@ -340,7 +341,8 @@ cv::Mat SuperPointFrontend::detect(cv::Mat &img)
 
     cv::Mat desc_nms;
     fast_nms(desc_no_nms, desc_nms, img.cols, img.rows);
-
+    std::cout << "After nms: " << kpts_nms.size() << std::endl;
+    
     /*지금은 필요없음
         // Empty cv::Mat that will update.
         kpts_nms_loc.create(kpts_node_nms.size(), 2, CV_32F); 

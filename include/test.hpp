@@ -21,6 +21,12 @@ std::string cv_type2str(int type);
 void test_with_magicleap();
 cv::Mat argmin_cv_mat(const cv::Mat& mat, int axis);
 cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score);
+
+/**
+ * @brief 순수 SuperPoint 클래스
+ * @author Chanwoo Lee 
+ * @date August 2020
+ */
 class SuperPoint : public Module {
 public:
     //Constructor
@@ -97,21 +103,21 @@ public:
     std::vector<cv::KeyPoint> kpts_nms;
 
 private:
-    std::shared_ptr<SuperPoint> model;
-    cv::Mat kpts_nms_loc;
-    cv::Mat kpts_nms_conf;
-    c10::TensorOptions tensor_opts;
-    c10::DeviceType device_type;
-    torch::Tensor mProb;
-    torch::Tensor mDesc;
-    int MAX_KEYPOINT = 100;
-    int nms_border = 8;
-    int nms_dist_thres = 4;
-    bool use_cuda;
-    float nms_dist;
-    float conf_thres=0.1;
-    float nn_thres;
-    bool verbose = 0;
+    std::shared_ptr<SuperPoint> model;  /// Superpoint model                
+    cv::Mat kpts_nms_loc;               ///
+    cv::Mat kpts_nms_conf;              ///
+    c10::TensorOptions tensor_opts;     ///
+    c10::DeviceType device_type;        ///
+    torch::Tensor mProb;                ///
+    torch::Tensor mDesc;                ///
+    int MAX_KEYPOINT = 1000;            ///
+    int nms_border = 8;                 ///
+    int nms_dist_thres = 3;             ///
+    bool use_cuda;                      ///
+    float nms_dist;                     ///
+    float conf_thres=0.001;             ///
+    float nn_thres;                     ///
+    bool verbose = 0;                   ///
 };
 
 class VideoStreamer{

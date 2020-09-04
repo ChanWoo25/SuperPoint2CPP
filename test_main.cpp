@@ -126,10 +126,17 @@ int main(const int argc, char* argv[])
     VideoStreamer vs(0);
     SuperPointFrontend SPF(weight_dir, torch::cuda::is_available());
     std::cout << "VC created, SuperpointFrontend Constructed.\n";
-    
 
-    int idx=1;
-    while(idx++){
+    std::ifstream inputFile("input.txt", std::ios::in);
+    std::ofstream outputFile("output.txt", std::ios::out | std::ios::app);
+    int test_nms_dist_thres;
+    float test_conf_thres;
+    inputFile >> test_nms_dist_thres >> test_conf_thres;
+    //Measuring Mean process time    
+    int64_t sumT = 0;
+
+    int idx=0;
+    while(++idx){
         // Capture frame-by-frame
         // Image's size is [640 x 480]
         if(!vs.next_frame()) { std::cout << "main -- Video End\n"; break; }
@@ -158,6 +165,9 @@ int main(const int argc, char* argv[])
         char c = (char)cv::waitKey(ms);
         if(c==27){ break; }
     }
+
+    std::cout << "\nMean Processing Time : " << (double)sumT / (double)idx << "ms \n";
+
     // Closes all the frames
     cv::destroyAllWindows();
 }

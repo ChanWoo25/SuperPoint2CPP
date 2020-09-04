@@ -26,13 +26,13 @@ else()
 endif()
 
 add_subdirectory(src)
-add_subdirectory(zed)
+#add_subdirectory(zed)
 
 add_executable(main test_main.cpp)
 target_compile_features(main PUBLIC cxx_std_14)
 target_link_libraries(main PUBLIC 
 superpoint
-libzed
+#libzed
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}
 )
