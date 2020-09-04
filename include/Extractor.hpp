@@ -98,7 +98,17 @@ public:
 protected:
 
     void ComputePyramid(cv::Mat image);
+
+/**
+ * @brief 스케일링된 OctTree 각 레벨에서 모두 Keypoint, Descriptor를 뽑아온다.
+ * @details OctTree를 내려가며, Keypoint detection and descript를 진행. 
+ *          @n&를 통해 리턴값대신 결과를 저장한다.
+ * @param allKeypoints : Keypoint의 집합. 
+ * @param _desc : descriptor모음. [nKeypoints, 256] 
+ */
     void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints, cv::Mat &_desc);    
+
+    
     std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
                                            const int &maxX, const int &minY, const int &maxY, const int &nFeatures, const int &level);
 

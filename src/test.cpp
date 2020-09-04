@@ -511,7 +511,7 @@ void SuperPointFrontend::computeDescriptors(cv::Mat& descriptors) //const std::v
     grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / mProb.size(1) - 1; // x
     grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / mProb.size(0) - 1; // y
 
-    auto desc = grid_sampler(mDesc, grid, 0, 0, false); // [1, 256, 1, n_keypoints]         //CHANGED ,false
+    auto desc = at::grid_sampler(mDesc, grid, 0, 0, false); // [1, 256, 1, n_keypoints]         //CHANGED ,false
     desc = desc.squeeze(0).squeeze(1);                  // [256, n_keypoints]
 
     // normalize to 1
