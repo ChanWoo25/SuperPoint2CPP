@@ -11,7 +11,7 @@ if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 endif()
 
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/home/leecw/libtorch" "/usr/local/zed")
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/libtorch" "/usr/local/zed")
 find_package(Torch REQUIRED QUIET)
 find_package(OpenCV 3.0 QUIET)
 find_package(ZED 3 REQUIRED)

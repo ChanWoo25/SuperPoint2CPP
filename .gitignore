@@ -1,6 +1,4 @@
 *build/
 *bin/
 *lib/
-*Weights/
-superpoint.pt
 SuperPointPretrainedNetwork
