@@ -1,72 +1,96 @@
-#ifndef SUPERPOINT_H
-#define SUPERPOINT_H
+#ifndef SUPERPOINT_HPP
+#define SUPERPOINT_HPP
 
 #include <opencv2/opencv.hpp>
 #include <torch/torch.h>
-
+#include <string>
 #include <vector>
+#include <ctime>
+#include <iostream>
+#include <iomanip>
+#include <limits>
 
-namespace SUPERPOINT
+namespace SuperPointSLAM
 {
+
 using namespace torch;
 using namespace nn;
 
+void printSection(int n, std::string s);
+std::string cv_type2str(int type);
+void test_with_magicleap();
+cv::Mat argmin_cv_mat(const cv::Mat& mat, int axis);
+cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score);
+
+/**
+ * @brief 순수 SuperPoint 클래스
+ */
 class SuperPoint : public Module {
-// class를 쓰면, 권한을 지정해야한다. 상속시 public Module을 바꿨고,
-// 멤버함수, 변수들도 public, private지정을 안해주면 모두 private처리가 되기 때문에 forward에 접할 수 없게된다.
 public:
-  SuperPoint(); //생성자
+    //Constructor
+    SuperPoint();
 
-  std::vector<torch::Tensor> forward(Tensor input); //순전파
+    /**
+     * @brief Display some information - 1. Cuda Availability 
+     * 2. GPU number 3. cudnn availability.
+     */
+    void display();
 
-private:
-  //SHARED ENCODER
-  Conv2d conv1a;
-  Conv2d conv1b;
+    // Display Module and Submodule's detail informations.
+    // (1)Whether it is trainable 
+    // (2)module's name(ex. Conv2D or Linear etc.).
+    void display(std::shared_ptr<SuperPoint> net);
 
-  Conv2d conv2a;
-  Conv2d conv2b;
+    // Forward propagation
+    void forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc);
 
-  Conv2d conv3a;
-  Conv2d conv3b;
+protected:
+    //SHARED ENCODER
+    Conv2d conv1a{nullptr};
+    Conv2d conv1b{nullptr};
+    Conv2d conv2a{nullptr};
+    Conv2d conv2b{nullptr};
+    Conv2d conv3a{nullptr};
+    Conv2d conv3b{nullptr};
+    Conv2d conv4a{nullptr};
+    Conv2d conv4b{nullptr};
 
-  Conv2d conv4a;
-  Conv2d conv4b;
+    //DETECTOR
+    Conv2d convPa{nullptr};
+    Conv2d convPb{nullptr};
 
-  //DETECTOR
-  Conv2d convPa;
-  Conv2d convPb;
+    //DESCRIPTOR
+    Conv2d convDa{nullptr};
+    Conv2d convDb{nullptr};
 
-  //DESCRIPTOR
-  Conv2d convDa;
-  Conv2d convDb;
-
-  const int c1 = 64;
-  const int c2 = 64;
-  const int c3 = 128;
-  const int c4 = 128;
-  const int c5 = 256;
-  const int d1 = 256;
+    const int c1 = 64;
+    const int c2 = 64;
+    const int c3 = 128;
+    const int c4 = 128;
+    const int c5 = 256;
+    const int d1 = 256;
+    bool verbose = 0;
 };
 
 
-cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
-// torch::Tensor NMS(torch::Tensor kpts);
-
-class SPDetector {
-public:
-    SPDetector(std::shared_ptr<SuperPoint> _model);
-    void detect(cv::Mat &image);
-    void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
-    void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
-
-private:
-    std::shared_ptr<SuperPoint> model;
-    Tensor mProb;
-    Tensor mDesc;
-};
-
-}  // ORB_SLAM
-
+}
 
 #endif
+
+
+
+// cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
+// // torch::Tensor NMS(torch::Tensor kpts);
+
+// class SPDetector {
+// public:
+//     SPDetector(std::shared_ptr<SuperPoint> _model);
+//     void detect(cv::Mat &image);
+//     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
+//     void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+
+// private:
+//     std::shared_ptr<SuperPoint> model;
+//     Tensor mProb;
+//     Tensor mDesc;
+// };

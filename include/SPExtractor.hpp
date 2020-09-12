@@ -28,12 +28,7 @@
 #include <torch/torch.h>
 #include "SuperPoint.hpp"
 
-#ifdef EIGEN_MPL2_ONLY
-#undef EIGEN_MPL2_ONLY
-#endif
-
-
-namespace SUPERPOINT
+namespace SuperPointSLAM
 {
 
 class ExtractorNode

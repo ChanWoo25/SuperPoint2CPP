@@ -28,6 +28,8 @@ cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score);
  * @date August 2020
  */
 class SuperPoint : public Module {
+// class를 쓰면, 권한을 지정해야한다. 상속시 public Module을 바꿨고,
+// 멤버함수, 변수들도 public, private지정을 안해주면 모두 private처리가 되기 때문에 forward에 접할 수 없게된다.
 public:
     //Constructor
     SuperPoint();
@@ -110,12 +112,12 @@ private:
     c10::DeviceType device_type;        ///
     torch::Tensor mProb;                ///
     torch::Tensor mDesc;                ///
-    int MAX_KEYPOINT = 1000;            ///
-    int nms_border = 8;                 ///
+    int MAX_KEYPOINT = 100;            ///
+    int nms_border = 6;                 ///
     int nms_dist_thres = 3;             ///
     bool use_cuda;                      ///
     float nms_dist;                     ///
-    float conf_thres=0.001;             ///
+    float conf_thres=0.002;             ///
     float nn_thres;                     ///
     bool verbose = 0;                   ///
 };
