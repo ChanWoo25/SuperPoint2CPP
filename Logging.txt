@@ -1,0 +1,36 @@
+<ver 0.1 - GPU 사용, use nms, 최적화 덜됨>
+[Test 1]
+conf_thres      0.015
+max_nms         100(개)
+input_size      {160, 120}
+proc_time       20~25(ms)
+
++ thres를 0.015 정도로 유지했을 때
+cpu, gpu처리 속도 차이가 크지 않았다.
+thres를 낮추는 경우 후보 keypoint가 많아지면서,
+nms에 시간이 더 오래 걸리고, gpu->cpu로 넘어가는
+descriptor의 크기도 커져서 그런게 아닌가 싶다.
+
+[Test 2]
+conf_thres      0.015
+max_nms         100(개)
+input_size      {320, 240}
+proc_time       64~70(ms)
+
++ 인풋 사이즈를 늘리자 시간이 많이 늘어났지만 
+인풋사이즈가 4배 늘어난 것에 비해 크지는 않다고 생각.
++ nms를 60개 선에서 끊는 경우,30ms 정도 소요되는 걸로 보아
+sorting&nms가 잡아먹는 시간이 상당한 것으로 보임.
+
+[Test 3]
+device          cpu
+conf_thres      0.015
+max_nms         100(개)
+input_size      {320, 240}
+proc_time       64~70(ms)
+
++ cpu로 돌리면 인풋 사이즈가 커지는 시점에서 다음 에러 발생.
+```
+Test: malloc.c:3729: _int_malloc: Assertion `(unsigned long) (size) >= (unsigned long) (nb)' failed.
+Aborted (core dumped)
+```

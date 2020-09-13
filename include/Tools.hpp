@@ -25,7 +25,7 @@ private:
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API
     int MAX_FRAME_NUM = 1000000;
     int current_frame_num = 0;
-    cv::Size input_size = {160, 120}; // {Width, Height}
+    cv::Size input_size = {320, 240}; // {Width, Height}
     cv::Size image_size;
     
 public:

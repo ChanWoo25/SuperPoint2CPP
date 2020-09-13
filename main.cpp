@@ -18,7 +18,7 @@ int main(const int argc, char* argv[])
         char* a = argv[1];
         ms = std::atoi(a);
     }
-    else ms = 100;
+    else ms = 10;
     std::cout << "Frame rate is " << ms << "ms.\n";
     
 
