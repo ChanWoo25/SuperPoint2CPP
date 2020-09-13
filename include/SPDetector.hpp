@@ -20,13 +20,32 @@ private:
     };
 
 public:
+
+    // Default Constuctor. No Use.
     SPDetector();
+
+    /**
+     * @brief Construct a new SPDetector::SPDetector object. 
+     * When Initialize SPDetector, (1) First we initialize 
+     * SuperPoint Class with weight_dir and use_cuda arguments. 
+     * (2) and Move to device(cpu or gpu) we'll use. 
+     * (3) Make the model eveluation mode, too.
+     * 
+     * @param _weight_dir the PATH that contains pretrained weight.
+     * @param _use_cuda whether the model operates in cpu or gpu.
+     */
     SPDetector(std::string _weight_dir, bool _use_cuda);
     
+    /**
+     * @brief Detect input image's Keypoints and Compute Descriptor.
+     * 
+     * @param img Input image. We use img's deep copy object.
+     * @return cv::Mat 
+     */
+    cv::Mat detect(cv::Mat &img);
 
     void fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height);
      
-    cv::Mat detect(cv::Mat &img);
     
     void NMS2
     (std::vector<cv::KeyPoint> det, cv::Mat conf, 
@@ -44,16 +63,18 @@ private:
     std::shared_ptr<SuperPoint> model;  /// Superpoint model                
     cv::Mat kpts_nms_loc;               ///
     cv::Mat kpts_nms_conf;              ///
-    c10::TensorOptions tensor_opts;     ///
-    c10::DeviceType device_type;        ///
+
+    // kFloat32, kStrided, requires_grad(false), cpu or gpu device.
+    c10::TensorOptions tensor_opts;     
+    c10::DeviceType mDeviceType;        ///
+    c10::Device mDevice;
     torch::Tensor mProb;                ///
     torch::Tensor mDesc;                ///
     int MAX_KEYPOINT = 100;            ///
-    int nms_border = 6;                 ///
-    int nms_dist_thres = 3;             ///
-    bool use_cuda;                      ///
+    int nms_border = 8;                 ///
+    int nms_dist_thres = 4;             ///
     float nms_dist;                     ///
-    float conf_thres=0.002;             ///
+    float conf_thres=0.015;             ///
     float nn_thres;                     ///
     bool verbose = 0;                   ///
 };

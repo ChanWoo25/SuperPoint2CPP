@@ -33,10 +33,9 @@ SuperPoint::SuperPoint()
     convDb = register_module("convDb", Conv2d(Conv2dOptions(c5, d1, 1).stride(1).padding(0)));
 }
 
-void SuperPoint::forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc)
+void SuperPoint::forward(torch::Tensor& x, torch::Tensor& Prob, torch::Tensor& Desc)
 {
     //SHARED ENCODER
-    //std::cout << "\nSHARED - ";
     x = relu(conv1a->forward(x));
     x = relu(conv1b->forward(x));
     x = max_pool2d(x, 2, 2);
@@ -61,19 +60,21 @@ void SuperPoint::forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& De
     auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
     auto dn = norm(desc, 2, 1);
     desc = desc.div(unsqueeze(dn, 1));
-    semi = softmax(semi, 1);
-    semi = semi.slice(1, 0, 64);
-    semi = semi.permute({0, 2, 3, 1}); // [B, H/8, W/8, 64]
+
+    //DETECTOR - POST PROCESS
+    semi = softmax(semi, 1);            // 65개 채널에서 [H/8 * W/8] 개 원소으 총합 1이 되도록 regression.
+    semi = semi.slice(1, 0, 64);        // remove rest_bin
+    semi = semi.permute({0, 2, 3, 1});  // [B, H/8, W/8, 64]
 
     int Hc = semi.size(1);
     int Wc = semi.size(2);
-    semi = semi.contiguous().view({-1, Hc, Wc, 8, 8});
+    semi = semi.contiguous().view({-1, Hc, Wc, 8, 8}); 
     semi = semi.permute({0, 1, 3, 2, 4});
     semi = semi.contiguous().view({-1, Hc * 8, Wc * 8}); // [B, H, W]
 
     //Return Tensor
-    Prob = semi;
-    Desc = desc;
+    Prob = semi;    // [B, H, W]
+    Desc = desc;    // [B, 256, H/8, W/8]
 }
 
 } // Namespace NAMU_TEST END

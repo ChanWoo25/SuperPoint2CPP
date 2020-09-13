@@ -34,91 +34,91 @@
 */
 
 
+
+
+
+// cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
+// // torch::Tensor NMS(torch::Tensor kpts);
+
+// class SPDetector {
+// public:
+//     SPDetector(std::shared_ptr<SuperPoint> _model);
+//     void detect(cv::Mat &image);
+//     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
+//     void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
+
+// private:
+//     std::shared_ptr<SuperPoint> model;
+//     Tensor mProb;
+//     Tensor mDesc;
+// };
+
+
+
 #include <SPDetector.hpp>
 
 namespace SuperPointSLAM
 {
 
 SPDetector::SPDetector(std::string _weight_dir, bool _use_cuda)
-{
+    :   mDeviceType((_use_cuda) ? c10::kCUDA : c10::kCPU),
+        mDevice(c10::Device(mDeviceType))
+{   
+    /** CONSTRUCTOR **/
+
     model = std::make_shared<SuperPoint>();
     torch::load(model, _weight_dir);
 
-    device_type = (use_cuda) ? kCUDA : kCPU;
-    c10::Device device(device_type);
+    // mDeviceType = (_use_cuda) ? c10::kCUDA : c10::kCPU;
+    // mDevice = c10::Device(mDeviceType);
 
-    tensor_opts = torch::TensorOptions()
+    // This options aren't allow to be changed.
+    tensor_opts = c10::TensorOptions()
                         .dtype(torch::kFloat32)
-                        .layout(torch::kStrided)
-                        .device(device)
+                        .layout(c10::kStrided)
                         .requires_grad(false);
     if (_use_cuda)
-        model->to(device);
+        model->to(mDevice);
     model->eval();
 }
 
 cv::Mat SPDetector::detect(cv::Mat &img)
 {
-    device_type = (use_cuda) ? kCUDA : kCPU;
-    c10::Device device(device_type);
+    at::Tensor x = torch::from_blob((void*)img.clone().data, \
+                                    {1, 1, img.rows, img.cols}, \
+                                    tensor_opts).to(mDevice);
+    x /= 255.0;
 
-    auto x = torch::from_blob(img.clone().data, {1, 1, img.rows, img.cols}, tensor_opts);
-    x /= 255;
-    //std::cout << "Successfully get bolb image.\n";
     torch::Tensor prob, desc;
     model->forward(x, prob, desc);
     prob = prob.squeeze(0);
     mProb = prob.clone();// [H, W] [120, 160]
     mDesc = desc.clone();// [1, 256, H/8, W/8]
-    //std::cout << "Successfully forward image.\n";
-    // Nonzero인 좌표를 Tensor로 저장.
-    // [H, W]에서 Threshold 이상인 픽셀은 1, otherise 0.
-    //std::cout << prob << std::endl;
-    auto kpts = (prob > conf_thres);
-    //  at::nonzero(at::Tensor input)
-    //      return the coordinates of nonzero value pixels of 'input' Tensor.
-    kpts = at::nonzero(kpts); // [n_keypoints, 2]  (y, x)
 
-    auto fkpts = kpts.to(kFloat);
+    at::Tensor kpts = (prob > conf_thres);          
+    kpts = at::nonzero(kpts); // [N, 2] (y, x)               
+    at::Tensor fkpts = kpts.to(kFloat);
+    at::Tensor grid = torch::zeros({1, 1, kpts.size(0), 2}).to(mDevice);
 
-    auto grid = torch::zeros({1, 1, kpts.size(0), 2}).to(device);   // [1, 1, n_keypoints, 2]
 
-    //  Tensor.slice is the alternative function of Python's Slicing syntex. 
-    //  and quite similar for using.
-    grid[0][0].slice(1, 0, 1) = 2.0 * fkpts.slice(1, 1, 2) / prob.size(1) - 1; // x
-    grid[0][0].slice(1, 1, 2) = 2.0 * fkpts.slice(1, 0, 1) / prob.size(0) - 1; // y
+    /** Get each Keypoints' descriptor. **/ 
+    grid[0][0].slice(1, 0, 1) = (2.0 * (fkpts.slice(1, 1, 2) / prob.size(1))) - 1; // x
+    grid[0][0].slice(1, 1, 2) = (2.0 * (fkpts.slice(1, 0, 1) / prob.size(0))) - 1; // y
+    desc = at::grid_sampler(desc, grid, 0, 0, true);    // [1, 256, 1, n_keypoints]
+    desc = desc.squeeze(0).squeeze(1);                  // [256, n_keypoints]
 
-    //  [Not Perfect]
-    //  at::grid_sampler(Tensor input, Tensor grid, int64 interpolation_mode, int64 padding_mode, bool align_corner)
-    //
-    //      Given an input and a flow-field grid, computes the output  
-    //      using input values and pixel locations from grid.
-    //      'input' is 4d or 5d input (N, C, Hin, Win) or (N, C, Depth, Hin, Win)
-    //      according to 'input' shape determined as (N, Hout, Wout, 2) or (N, D, Hout, Wout)
-    //      Resuling in 'output' (N, C, Hout, Wout) or (N, C, Depth, Hout, Wout).
-    //      
-    //      interpolation_mode  --  '0': bilinear, '1': nearest
-    //      padding_mode        --  '0': zeros, '1': border, '2': reflection
-    //      
-    //  grid[0][0] 에는 keypoints 개수만큼의 (x, y)좌표가 들어있다.
-    desc = at::grid_sampler(desc, grid, 0, 0, false); // [1, 256, 1, n_keypoints]       //CHANGED
-    desc = desc.squeeze(0).squeeze(1);                // [256, n_keypoints]
-    //std::cout << "Successfully grid sample.\n";
-
-    // normalize to dim 1 with 2-Norm.
-    // 각 키포인트에 대해서 Normalize.
-    auto dn = norm(desc, 2, 1);        // [256]
-    desc = desc.div(unsqueeze(dn, 1)); // [256, n_keypoints]
-
-    desc = desc.transpose(0, 1).contiguous(); // [n_keypoints, 256]
+    /** Normalize 1-Dimension with 2-Norm. **/
+    at::Tensor dn = at::norm(desc, 2, 1);       // [256, 1]
+    desc = desc.div(unsqueeze(dn, 1));          // [256, n_keypoints]
+    desc = desc.transpose(0, 1).contiguous();   // [n_keypoints, 256]
 
     // After processing, back to CPU only descriptor
-    if (use_cuda)
+    if (mDeviceType == c10::kCUDA)
         desc = desc.to(kCPU);
 
     //  Convert descriptor 
     //  From at::Tensor To cv::Mat
-    auto desc_size = cv::Size(desc.size(1), desc.size(0));  // [256, n_keypoints]
+    cv::Size desc_size(desc.size(1), desc.size(0)); // [256, n_keypoints]
     int n_keypoints = desc.size(0); 
     std::cout << "Before nms: " << n_keypoints << std::endl;
     cv::Mat desc_no_nms(desc_size, CV_32FC1, desc.data_ptr<float>());

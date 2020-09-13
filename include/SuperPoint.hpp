@@ -16,23 +16,19 @@ namespace SuperPointSLAM
 using namespace torch;
 using namespace nn;
 
-void printSection(int n, std::string s);
-std::string cv_type2str(int type);
-void test_with_magicleap();
-cv::Mat argmin_cv_mat(const cv::Mat& mat, int axis);
-cv::Mat argmin_cv_mat_with_score(const cv::Mat& mat, int axis, cv::Mat& score);
-
 /**
  * @brief 순수 SuperPoint 클래스
  */
 class SuperPoint : public Module {
 public:
-    //Constructor
+    // SuperPoint Model Constructor
     SuperPoint();
 
     /**
-     * @brief Display some information - 1. Cuda Availability 
-     * 2. GPU number 3. cudnn availability.
+     * Display some information
+     * 1. Cuda Availability 
+     * 2. GPU number 
+     * 3. cudnn availability.
      */
     void display();
 
@@ -41,8 +37,19 @@ public:
     // (2)module's name(ex. Conv2D or Linear etc.).
     void display(std::shared_ptr<SuperPoint> net);
 
-    // Forward propagation
-    void forward(torch::Tensor x, torch::Tensor& Prob, torch::Tensor& Desc);
+    /**
+     * @brief Forward propagation
+     * @param x input Tensor.
+     * @param Prob Output Probabities Tensor
+     * @param Desc Output Descriptors Tensor
+     * @details Return probabilities and descriptors using Prob, Desc.
+     * - all Arguments are by reference to speed up.
+     * - When input x's demension is [B, H, W], (B = Batch_size)
+     * - Output dimension is as follows.
+     * - Prob: [B, H, W]
+     * - Desc: [B, 256, H/8, W/8]
+     */
+    void forward(torch::Tensor& x, torch::Tensor& Prob, torch::Tensor& Desc);
 
 protected:
     //SHARED ENCODER
@@ -69,28 +76,8 @@ protected:
     const int c4 = 128;
     const int c5 = 256;
     const int d1 = 256;
-    bool verbose = 0;
 };
-
 
 }
 
 #endif
-
-
-
-// cv::Mat SPdetect(std::shared_ptr<SuperPoint> model, cv::Mat img, std::vector<cv::KeyPoint> &keypoints, double threshold, bool nms);
-// // torch::Tensor NMS(torch::Tensor kpts);
-
-// class SPDetector {
-// public:
-//     SPDetector(std::shared_ptr<SuperPoint> _model);
-//     void detect(cv::Mat &image);
-//     void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
-//     void computeDescriptors(const std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors);
-
-// private:
-//     std::shared_ptr<SuperPoint> model;
-//     Tensor mProb;
-//     Tensor mDesc;
-// };

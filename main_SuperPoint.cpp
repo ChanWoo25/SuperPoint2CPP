@@ -11,6 +11,7 @@ void test();
 
 int main(const int argc, char* argv[])
 {
+    /** From the main argument, Retrieve waiting period to control Displaying.**/
     int ms;
     if(argc == 2)
     {   
@@ -22,7 +23,7 @@ int main(const int argc, char* argv[])
     
 
     /** Initialize VideoSteamer and SuperPoint Object **/ 
-    //VideoStreamer vs("../Dataset/nyu_snippet.mp4");
+    // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
     VideoStreamer vs(0);
     SuperPointFrontend SPF(weight_dir, torch::cuda::is_available());
     std::cout << "VC created, SuperpointFrontend Constructed.\n";
