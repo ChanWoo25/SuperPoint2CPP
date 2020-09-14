@@ -3,6 +3,7 @@
 
 using namespace SuperPointSLAM;
 
+/**  You need to modify the path below that corresponds to your dataset and weight path. **/
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
 const std::string weight_dir = project_dir + "Weights/superpoint.pt";
 const std::string dataset_dir = project_dir + "Dataset/";
@@ -24,7 +25,10 @@ int main(const int argc, char* argv[])
 
     /** Initialize VideoSteamer and SuperPoint Object **/ 
     // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
-    VideoStreamer vs(0);
+    // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
+    //VideoStreamer vs(0);
+    VideoStreamer vs("/home/leecw/Datasets/Kitti_Post/00/K%4d.png");
+    vs.setImageSize(cv::Size(1080, 360));
     SPDetector SPF(weight_dir, torch::cuda::is_available());
     std::cout << "VC created, SPDetector Constructed.\n";
 

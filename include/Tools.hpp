@@ -78,6 +78,10 @@ public:
     // Read a image as grayscale and resize to img_size.
 
     bool next_frame();
+    void setImageSize(const cv::Size &sz){ input_size = sz; 
+        W_scale = (float)image_size.width / (float)input_size.width;
+        H_scale = (float)image_size.height / (float)input_size.height;
+    }
 
 
 };

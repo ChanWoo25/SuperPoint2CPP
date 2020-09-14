@@ -74,7 +74,7 @@ private:
     int nms_border = 8;                 ///
     int nms_dist_thres = 4;             ///
     float nms_dist;                     ///
-    float conf_thres=0.015;             ///
+    float conf_thres=0.156;             /// 각 픽셀의 기댓값: 1/64 = 0.015625
     float nn_thres;                     ///
     bool verbose = 0;                   ///
 };
