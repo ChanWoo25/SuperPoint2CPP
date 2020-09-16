@@ -32,7 +32,6 @@ message("CreateVoca's home directory is ${CMAKE_HOME_DIRECTORY}")
 add_library(DBoW2 SHARED ${SRCS})
 target_include_directories(DBoW2 PUBLIC 
     ${CMAKE_HOME_DIRECTORY}/CreateVoca/include 
-    ${OpenCV_INCLUDE_DIRS}
 )
 target_link_libraries(DBoW2 ${OpenCV_LIBS})
 set_target_properties(DBoW2 PROPERTIES 

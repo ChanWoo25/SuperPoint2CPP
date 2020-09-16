@@ -82,9 +82,8 @@ public:
         W_scale = (float)image_size.width / (float)input_size.width;
         H_scale = (float)image_size.height / (float)input_size.height;
     }
-
-
 };
 
+std::string cv_type2str(int type);
 
 #endif

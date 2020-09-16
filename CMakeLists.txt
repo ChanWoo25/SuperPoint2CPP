@@ -62,7 +62,7 @@ RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
 ### Runfile to create Vocabulary
 add_executable(CreateVoca main_CreateVoca.cpp)
 target_link_libraries(CreateVoca PUBLIC 
-superpoint
+Super
 DBoW2
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}

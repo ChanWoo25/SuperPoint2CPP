@@ -68,6 +68,11 @@
         "__split_buffer": "cpp",
         "csignal": "cpp",
         "strstream": "cpp",
-        "cfenv": "cpp"
+        "cfenv": "cpp",
+        "iterator": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "map": "cpp",
+        "set": "cpp"
     }
 }

@@ -26,17 +26,21 @@ int main(const int argc, char* argv[])
     /** Initialize VideoSteamer and SuperPoint Object **/ 
     // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
     // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
-    //VideoStreamer vs(0);
+    // VideoStreamer vs(0);
     VideoStreamer vs("/home/leecw/Datasets/Kitti_Post/00/K%4d.png");
-    vs.setImageSize(cv::Size(1080, 360));
+    vs.setImageSize(cv::Size(720, 240));
+    
+    
+    /** Superpoint Detector **/
     SPDetector SPF(weight_dir, torch::cuda::is_available());
     std::cout << "VC created, SPDetector Constructed.\n";
 
-    std::ifstream inputFile("input.txt", std::ios::in);
-    std::ofstream outputFile("output.txt", std::ios::out | std::ios::app);
-    int test_nms_dist_thres;
-    float test_conf_thres;
-    inputFile >> test_nms_dist_thres >> test_conf_thres;
+    // Test input/output file
+    // std::ifstream inputFile("input.txt", std::ios::in);
+    // std::ofstream outputFile("output.txt", std::ios::out | std::ios::app);
+    // int test_nms_dist_thres;
+    // float test_conf_thres;
+    // inputFile >> test_nms_dist_thres >> test_conf_thres;
 
 
     cv::namedWindow("superpoint", cv::WINDOW_AUTOSIZE);
@@ -54,13 +58,14 @@ int main(const int argc, char* argv[])
         
         
         //SPF.computeDescriptors(desciptors);
-        std::cout << idx << "-th n_keypoint: " << SPF.kpts_nms.size()
-                << " - Processing time: " << mill.count() << "ms\n";
+        std::cout << idx << "-th Processing time: " << mill.count() << "ms\n";
         float x_scale(vs.W_scale), y_scale(vs.H_scale);
-        for(auto iter = SPF.kpts_nms.begin(); iter != SPF.kpts_nms.end(); iter++)
+
+        auto ptr = SPF.kpts_loc.ptr<float>();
+        for(int i=0; i < SPF.n_keypoints; i++)
         {
-            float X((*iter).pt.x), Y((*iter).pt.y);
-            cv::circle(vs.img, cv::Point(int(X*x_scale), int(Y*y_scale)), 3, cv::Scalar(0, 0, 255), 2);
+            float X(*(ptr++)), Y(*(ptr++));
+            cv::circle(vs.img, cv::Point(int(X*x_scale), int(Y*y_scale)), 3, cv::Scalar(255, 0, 255), 2);
         }
 
         // Display the resulting frame

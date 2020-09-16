@@ -574,7 +574,7 @@ void TemplatedVocabulary<TDescriptor,F>::create(
 {
   m_nodes.clear();
   m_words.clear();
-  
+  std::cout << "1\n";
   // expected_nodes = Sum_{i=0..L} ( k^i )
 	int expected_nodes = 
 		(int)((pow((double)m_k, (double)m_L + 1) - 1)/(m_k - 1));
@@ -582,19 +582,24 @@ void TemplatedVocabulary<TDescriptor,F>::create(
   m_nodes.reserve(expected_nodes); // avoid allocations when creating the tree
   
   
+  std::cout << "2\n";
   std::vector<pDescriptor> features;
   getFeatures(training_features, features);
 
 
+  std::cout << "3\n";
   // create root  
   m_nodes.push_back(Node(0)); // root
   
+  std::cout << "4\n";
   // create the tree
   HKmeansStep(0, features, 1);
 
+  std::cout << "5\n";
   // create the words
   createWords();
 
+  std::cout << "6\n";
   // and set the weight of each node of the tree
   setNodeWeights(training_features);
   
@@ -677,6 +682,7 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
   
   //#############################################################################//
 
+  std::cout << "1\n";
   if((int)descriptors.size() <= m_k)
   {
     // A. Trivial case: one cluster per feature
@@ -685,13 +691,14 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
     for(unsigned int i = 0; i < descriptors.size(); i++)
     {
       groups[i].push_back(i);
-      clusters.push_back(*descriptors[i]);
+      clusters.push_back(*(descriptors[i]));
     }
   }
   else
   {
     // B. Select clusters and groups with kmeans
     
+    std::cout << "B\n"; int c=0;
     bool first_time = true;
     bool go_on = true;
     
@@ -704,6 +711,8 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
 
 			if(first_time)
 			{
+        
+        std::cout << "init\n";
         // random sample 
         initiateClusters(descriptors, clusters);
       }
@@ -711,6 +720,7 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
       {
         // calculate cluster centres
 
+        std::cout << (c++) << std::endl;
         for(unsigned int c = 0; c < clusters.size(); ++c)
         {
           std::vector<pDescriptor> cluster_descriptors;
@@ -762,7 +772,7 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
           }
         }
 
-        int fit_index = fit - descriptors.begin()
+        int fit_index = fit - descriptors.begin();
         groups[icluster].push_back(fit_index);
         current_association[fit_index] = icluster;
       }
@@ -874,31 +884,39 @@ void TemplatedVocabulary<TDescriptor,F>::initiateClustersKMpp
   // 4. Repeat Steps 2 and 3 until k centers have been chosen.
   // 5. Now that the initial centers have been chosen, proceed using standard k-means 
   //    clustering.
-
+  std::cout << "initiateClustersKMpp\n";
+  
   clusters.resize(0);
   clusters.reserve(m_k);
   // 각 descriptor별로 어떠한 center와의 거리든 가장 가까운 거리를 저장.
   std::vector<double> min_dists(pfeatures.size(), std::numeric_limits<double>::max());
   
   // 1. descriptor 중 랜덤하게 하나 선택.
-  
+  std::cout << "1\n";
   int ifeature = RandomInt(0, pfeatures.size()-1);
   
   // create first cluster 
   //clusters[i]는 각 클러스터의 중심점의 역할을 한다. 여기서는 초기화이기 때문에 랜덤 선택하는것.
+  std::cout << "1.2\n";
   clusters.push_back(*pfeatures[ifeature]);
 
   // compute the initial distances
   typename std::vector<pDescriptor>::const_iterator fit;
   std::vector<double>::iterator dit;
+  std::cout << "1.4\n";
   dit = min_dists.begin();
   for(fit = pfeatures.begin(); fit != pfeatures.end(); ++fit, ++dit)
   {
+    std::cout << "1.6\n";
     *dit = F::distance(*(*fit), clusters.back());
   }  
 
+
+  std::cout << "2\n";
   while((int)clusters.size() < m_k)
   {
+
+    std::cout << "3\n";
     // 2. (1. 과정)을 반복. min_dist를 업데이트해준다는 것이 차이.
     dit = min_dists.begin();
     for(fit = pfeatures.begin(); fit != pfeatures.end(); ++fit, ++dit)

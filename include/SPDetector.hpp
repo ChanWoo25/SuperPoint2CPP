@@ -42,10 +42,9 @@ public:
      * @param img Input image. We use img's deep copy object.
      * @return cv::Mat 
      */
-    cv::Mat detect(cv::Mat &img);
+    cv::Mat *detect(cv::Mat &img);
 
     void fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height);
-     
     
     void NMS2
     (std::vector<cv::KeyPoint> det, cv::Mat conf, 
@@ -58,25 +57,37 @@ public:
 
     std::vector<KeyPointNode> kpts_node_nms;
     std::vector<cv::KeyPoint> kpts_nms;
+    cv::Mat kpts_loc;               ///
+    cv::Mat kpts_conf;              ///
+    cv::Mat descriptors;
+    int n_keypoints;
 
 private:
     std::shared_ptr<SuperPoint> model;  /// Superpoint model                
-    cv::Mat kpts_nms_loc;               ///
-    cv::Mat kpts_nms_conf;              ///
+    
 
     // kFloat32, kStrided, requires_grad(false), cpu or gpu device.
     c10::TensorOptions tensor_opts;     
-    c10::DeviceType mDeviceType;        ///
+    c10::DeviceType mDeviceType;      
     c10::Device mDevice;
-    torch::Tensor mProb;                ///
-    torch::Tensor mDesc;                ///
-    int MAX_KEYPOINT = 100;            ///
-    int nms_border = 8;                 ///
-    int nms_dist_thres = 4;             ///
-    float nms_dist;                     ///
-    float conf_thres=0.156;             /// 각 픽셀의 기댓값: 1/64 = 0.015625
+
+    // Superpoint Output Probability Tensor
+    torch::Tensor mProb;              
+    // Superpoint Output Descriptor Tensor
+    torch::Tensor mDesc;              
+    
+    void SemiNMS(at::Tensor& kpts);
+                    
+    float conf_thres=0.0625;             /// 각 픽셀의 기댓값: 1/64 = 0.015625
     float nn_thres;                     ///
     bool verbose = 0;                   ///
+    
+    // NMS parameters. (Not use now.)
+    bool nms = false;
+    int MAX_KEYPOINT = 100;           
+    int nms_border = 8;               
+    int nms_dist_thres = 4;           
+    float nms_dist;   
 };
 
 }
