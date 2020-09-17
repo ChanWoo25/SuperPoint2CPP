@@ -10,7 +10,7 @@ DESCRIPTION     "C++ Implementation of Superpoint."
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
 
 ### LIBTORCH
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/libtorch" "/usr/local/zed")
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/libtorch")
 find_package(Torch REQUIRED QUIET)
 include_directories(${TORCH_INCLUDE_DIRS})
 ###
@@ -24,6 +24,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 ###
 
 ### ZED & CUDA
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/zed")
 find_package(ZED 3 REQUIRED)
 find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
 include_directories(${ZED_INCLUDE_DIRS})

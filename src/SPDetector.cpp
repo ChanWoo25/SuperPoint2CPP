@@ -105,16 +105,9 @@ cv::Mat* SPDetector::detect(cv::Mat &img)
     at::Tensor fkpts = kpts.to(kFloat);
     at::Tensor grid = torch::zeros({1, 1, kpts.size(0), 2}).to(mDevice); 
     // grid.print(); // [CUDAFloatType [1, 1, 225, 2]]
-    
-    // all [CUDAFloatType [225, 1]]
-    // grid[0][0].slice(1, 0, 1).print();
-    // grid[0][0].slice(1, 1, 2).print();
-    // fkpts.slice(1, 1, 2).print();
-    // fkpts.slice(1, 0, 1).print();
 
-    // mProb size(1): 320, size(0):240
-    std::cout   << "mProb size(1): " << mProb.size(1) 
-                << ", size(0):" << mProb.size(0) << std::endl;
+    // mProb size(1): W - cols - 320, size(0): H - rows - 240
+
     /** Get each Keypoints' descriptor. **/ 
     grid[0][0].slice(1, 0, 1) = (2.0 * (fkpts.slice(1, 1, 2) / mProb.size(1))) - 1; // x
     grid[0][0].slice(1, 1, 2) = (2.0 * (fkpts.slice(1, 0, 1) / mProb.size(0))) - 1; // y
@@ -136,14 +129,14 @@ cv::Mat* SPDetector::detect(cv::Mat &img)
     n_keypoints = mDesc.size(0); 
     std::cout << "N - Keypoint : " << n_keypoints << std::endl;
     
-    std::cout << "mDesc.numel() : " << mDesc.numel() << std::endl;
-    std::cout << "mDesc.numel() * float : " << sizeof(float) * mDesc.numel() << std::endl;
+    // std::cout << "mDesc.numel() : " << mDesc.numel() << std::endl;
+    // std::cout << "mDesc.numel() * float : " << sizeof(float) * mDesc.numel() << std::endl;
     // [256, N], CV_32F
     descriptors.create(n_keypoints, 256, CV_32FC1);
 
     memcpy((void*)descriptors.data, mDesc.data_ptr(), sizeof(float) * mDesc.numel());
     // descriptors = cv::Mat(desc_size, CV_32FC1, mDesc.data_ptr<float>());
-    
+    mDesc.is_contiguous()
 
     // Convert Keypoint
     // From torch::Tensor   kpts(=keypoints)
