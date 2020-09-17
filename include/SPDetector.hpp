@@ -11,6 +11,10 @@
 namespace SuperPointSLAM
 {
 
+
+
+#define EPSILON 1e-19
+
 class SPDetector
 {
 private:
@@ -42,7 +46,7 @@ public:
      * @param img Input image. We use img's deep copy object.
      * @return cv::Mat 
      */
-    cv::Mat *detect(cv::Mat &img);
+    cv::Mat* detect(cv::Mat &img);
 
     void fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height);
     

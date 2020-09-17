@@ -25,7 +25,7 @@ namespace DBoW2 {
 class FClass
 {
   class TDescriptor;
-  typedef const TDescriptor *pDescriptor;
+  typedef const TDescriptor* pDescriptor;
   
   /**
    * Calculates the mean value of a set of descriptors

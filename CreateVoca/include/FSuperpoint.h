@@ -13,6 +13,7 @@
 #include <opencv2/core.hpp>
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include "FClass.h"
 
@@ -32,7 +33,7 @@ public:
   /// Descriptor type
   typedef cv::Mat TDescriptor; // CV_32F
   /// Pointer to a single descriptor
-  typedef const TDescriptor *pDescriptor;
+  typedef const TDescriptor* pDescriptor;
   /// Descriptor length (in float)
   static const int L;
 

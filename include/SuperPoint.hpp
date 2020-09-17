@@ -76,6 +76,8 @@ protected:
     const int c4 = 128;
     const int c5 = 256;
     const int d1 = 256;
+
+    const float EPSILON = 1e-19;
 };
 
 }

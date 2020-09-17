@@ -52,11 +52,19 @@ void FSUPERPOINT::meanValue(const std::vector<FSUPERPOINT::pDescriptor> &descrip
 double FSUPERPOINT::distance(const FSUPERPOINT::TDescriptor &a, 
   const FSUPERPOINT::TDescriptor &b)
 {
+  if(a.empty() || b.empty())
+  {
+    std::cout << "ERROR: Mat is empty!\n";
+    exit(1);
+  }
+
   TDescriptor dist = a - b;
-  dist = dist * dist;
-  double s = cv::sum(dist)[0];
+  dist = dist * dist.t();
+
+  double s = dist.at<float>(0);
   s /= FSUPERPOINT::L;
-  return s;
+
+  return std::sqrt(s);
 }
 
 // --------------------------------------------------------------------------

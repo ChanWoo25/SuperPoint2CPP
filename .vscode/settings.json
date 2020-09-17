@@ -73,6 +73,8 @@
         "queue": "cpp",
         "stack": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "__hash_table": "cpp",
+        "__tree": "cpp"
     }
 }

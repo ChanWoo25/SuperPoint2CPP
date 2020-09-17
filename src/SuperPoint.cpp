@@ -59,7 +59,7 @@ void SuperPoint::forward(torch::Tensor& x, torch::Tensor& Prob, torch::Tensor& D
     auto cDa = relu(convDa->forward(x));
     auto desc = convDb->forward(cDa); // [B, 256, H/8, W/8]
     auto dn = norm(desc, 2, 1);
-    desc = desc.div(unsqueeze(dn, 1));
+    desc = at::div((desc + EPSILON), unsqueeze(dn, 1));
 
     //DETECTOR - POST PROCESS
     semi = softmax(semi, 1);            // 65개 채널에서 [H/8 * W/8] 개 원소으 총합 1이 되도록 regression.

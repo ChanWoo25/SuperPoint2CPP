@@ -10,9 +10,9 @@
 #include <vector>
 
 // OpenCV
-#include <opencv2/core.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/features2d.hpp>
+#include <opencv2/opencv.hpp>
+// #include <opencv2/highgui.hpp>
+// #include <opencv2/features2d.hpp>
 #include <DBoW2.h>
 #include <SPDetector.hpp>
 #include <Tools.hpp>
@@ -42,15 +42,25 @@ void wait()
 void test()
 {
 
-    float a[] = {1, 2, 3};
+    float a[] = {1, 2, 3, 4, 5, 6};
     float b[] = {4, 5, 6};
-    cv::Mat A(3, 1, CV_32F, a);
+    cv::Mat A(3, 2, CV_32F, a);
     cv::Mat B(3, 1, CV_32F, b);
-    A = A.t() * A;
     std::cout << A << std::endl;
+    std::cout << A.row(0) << std::endl;
+    std::cout << A.row(1) << std::endl;
+    std::cout << A.col(0) << std::endl;
+    std::cout << A.col(0) << std::endl;
+    std::cout << A.size() << std::endl;
     double c = cv::sum(A)[0];
+    double d = A.at<float>(0, 0);
 
     std::cout << c << std::endl;
+    std::cout << std::sqrt(c) << std::endl;
+
+    // std::cout << d << std::endl;
+    // std::cout << A.at<float>(0) << std::endl;
+    // std::cout << B.at<float>(0) << std::endl;
 }
 
 /***************************************************************************/
@@ -63,6 +73,10 @@ int main(int argc, char* argv[])
         DATA_PATH = cv::String(argv[1]);
         cout << DATA_PATH << endl;
     }
+
+
+    // test();
+
 
     vector< vector<cv::Mat> > features;
     VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
@@ -81,18 +95,33 @@ int main(int argc, char* argv[])
         }
 
         features.push_back(vector<cv::Mat>());
-        cv::Mat *descriptors = SPF.detect(vs.input);  // [256, N_kpts] format=[W, H]
+        features[cnt].resize(0);
+
+        cv::Mat* descriptors = SPF.detect(vs.input);  // [N_kpts, 256]  Size format:[W, H]
         int len = descriptors->size().height;
+
         for(unsigned i = 0; i < len; i++)
         {
+            //std::cout << "======================< " << i << " >======================\n"; 
+            //std::cout << descriptors->row(i) << std::endl;
             features[cnt].push_back(descriptors->row(i));
+            //getchar();
         }
-        std::cout << cnt << "-th images' feature num: " << features[cnt].size() << std::endl;
+        
+
+        // for(unsigned i = 0; i<3; i++)
+        // {   
+        //     auto m = features[cnt][i];
+        //     std::cout << m.isContinuous() << std::endl;
+        //     std::cout << m.size() << std::endl;
+        //     wait();
+        // }
+        
+
         cnt++;  
     }
 
-    test();
-    //SuperpointVocCreation(features);
+    SuperpointVocCreation(features);
 
     // wait();
 

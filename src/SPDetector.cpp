@@ -82,15 +82,14 @@ SPDetector::SPDetector(std::string _weight_dir, bool _use_cuda)
     model->eval();
 }
 
-cv::Mat *SPDetector::detect(cv::Mat &img)
+cv::Mat* SPDetector::detect(cv::Mat &img)
 {
     bool scale = true;
 
     at::Tensor x = torch::from_blob((void*)img.clone().data, \
                                     {1, 1, img.rows, img.cols}, \
                                     tensor_opts).to(mDevice);
-
-    x /= 255.0;
+    x = (x + EPSILON) / 255.0;
 
     model->forward(x, mProb, mDesc);
     mProb = mProb.squeeze(0);
@@ -104,30 +103,46 @@ cv::Mat *SPDetector::detect(cv::Mat &img)
 
     kpts = at::nonzero(kpts); // [N, 2] (y, x)               
     at::Tensor fkpts = kpts.to(kFloat);
-    at::Tensor grid = torch::zeros({1, 1, kpts.size(0), 2}).to(mDevice);
+    at::Tensor grid = torch::zeros({1, 1, kpts.size(0), 2}).to(mDevice); 
+    // grid.print(); // [CUDAFloatType [1, 1, 225, 2]]
+    
+    // all [CUDAFloatType [225, 1]]
+    // grid[0][0].slice(1, 0, 1).print();
+    // grid[0][0].slice(1, 1, 2).print();
+    // fkpts.slice(1, 1, 2).print();
+    // fkpts.slice(1, 0, 1).print();
 
-
+    // mProb size(1): 320, size(0):240
+    std::cout   << "mProb size(1): " << mProb.size(1) 
+                << ", size(0):" << mProb.size(0) << std::endl;
     /** Get each Keypoints' descriptor. **/ 
     grid[0][0].slice(1, 0, 1) = (2.0 * (fkpts.slice(1, 1, 2) / mProb.size(1))) - 1; // x
     grid[0][0].slice(1, 1, 2) = (2.0 * (fkpts.slice(1, 0, 1) / mProb.size(0))) - 1; // y
-    mDesc = at::grid_sampler(mDesc, grid, 0, 0, true);    // [1, 256, 1, n_keypoints]
+    mDesc = at::grid_sampler(mDesc, grid, 0, 0, false);    // [1, 256, 1, n_keypoints]
     mDesc = mDesc.squeeze(0).squeeze(1);                  // [256, n_keypoints]
 
     /** Normalize 1-Dimension with 2-Norm. **/
-    at::Tensor dn = at::norm(mDesc, 2, 1);       // [256, 1]
-    mDesc = mDesc.div(unsqueeze(dn, 1));          // [256, n_keypoints]
-    mDesc = mDesc.transpose(0, 1).contiguous();   // [CUDAFloatType [N, 256]]
+    at::Tensor dn = at::norm(mDesc, 2, 1);          // [CUDAFloatType [256]]
+    mDesc = at::div((mDesc + EPSILON), unsqueeze(dn, 1));
+    //mDesc = mDesc.div(unsqueeze(dn, 1));            // [256, n_keypoints] <- unsqueeezed dn[CUDAFloatType [256, 1]]
+    mDesc = mDesc.transpose(0, 1).contiguous();     // [CUDAFloatType [N, 256]]
     
     // After processing, back to CPU only descriptor
-    // if (mDeviceType == c10::kCUDA)
-    //     mDesc = mDesc.to(kCPU);
+    if (mDeviceType == c10::kCUDA)
+        mDesc = mDesc.to(kCPU);
 
     /** Convert descriptor From at::Tensor To cv::Mat **/  
     cv::Size desc_size(mDesc.size(1), mDesc.size(0)); 
     n_keypoints = mDesc.size(0); 
     std::cout << "N - Keypoint : " << n_keypoints << std::endl;
+    
+    std::cout << "mDesc.numel() : " << mDesc.numel() << std::endl;
+    std::cout << "mDesc.numel() * float : " << sizeof(float) * mDesc.numel() << std::endl;
     // [256, N], CV_32F
-    descriptors = cv::Mat(desc_size, CV_32FC1, mDesc.data_ptr<float>());
+    descriptors.create(n_keypoints, 256, CV_32FC1);
+
+    memcpy((void*)descriptors.data, mDesc.data_ptr(), sizeof(float) * mDesc.numel());
+    // descriptors = cv::Mat(desc_size, CV_32FC1, mDesc.data_ptr<float>());
     
 
     // Convert Keypoint
@@ -148,7 +163,7 @@ cv::Mat *SPDetector::detect(cv::Mat &img)
     mProb.reset();
     mDesc.reset();
 
-    return (&descriptors);
+    return &descriptors;
 }
 
 void SPDetector::SemiNMS(at::Tensor& kpts)
@@ -164,7 +179,6 @@ void SPDetector::SemiNMS(at::Tensor& kpts)
     auto pT1 = kpts.data_ptr<bool>();
     auto pT2 = pT1 + collen;
     auto pT3 = pT2 + collen;
-    auto pT4 = pT3 + collen;
 
     for(int i = 0; i < rowlen; i++)
     {
@@ -172,16 +186,13 @@ void SPDetector::SemiNMS(at::Tensor& kpts)
         {
             if(*pT1 && (i < rowlen-2) && (j < collen-2))
             {
-                *(pT1 + 1) = 0; *(pT1 + 2) = 0; //*(pT1 + 3) = 0; 
-                *pT2 = 0; *(pT2 + 1) = 0; *(pT2 + 2) = 0; //*(pT2 + 3) = 0; 
-                *pT3 = 0; *(pT3 + 1) = 0; *(pT3 + 2) = 0; //*(pT3 + 3) = 0; 
-                //*pT4 = 0; *(pT4 + 1) = 0; *(pT4 + 2) = 0; *(pT4 + 3) = 0; 
+                *(pT1 + 1) = 0; *(pT1 + 2) = 0;
+                *pT2 = 0; *(pT2 + 1) = 0; *(pT2 + 2) = 0; 
+                *pT3 = 0; *(pT3 + 1) = 0; *(pT3 + 2) = 0; 
             }
-            
             pT1++;
             pT2++;
             pT3++;
-            pT4++;
         }
     }
 

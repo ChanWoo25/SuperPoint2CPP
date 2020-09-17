@@ -17,9 +17,10 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 
 #include "FeatureVector.h"
+#include "FSuperpoint.h"
 #include "BowVector.h"
 #include "ScoringObject.h"
 
@@ -574,32 +575,27 @@ void TemplatedVocabulary<TDescriptor,F>::create(
 {
   m_nodes.clear();
   m_words.clear();
-  std::cout << "1\n";
+  std::cout << "===[Create]=== \n";
   // expected_nodes = Sum_{i=0..L} ( k^i )
 	int expected_nodes = 
 		(int)((pow((double)m_k, (double)m_L + 1) - 1)/(m_k - 1));
 
   m_nodes.reserve(expected_nodes); // avoid allocations when creating the tree
   
-  
-  std::cout << "2\n";
   std::vector<pDescriptor> features;
   getFeatures(training_features, features);
+  // for(int i=0; i<5; i++)
+  //   std::cout << *features[i] << std::endl; -> OK [-1,1] 사이의 값들로 잘 나옴. 
 
-
-  std::cout << "3\n";
   // create root  
   m_nodes.push_back(Node(0)); // root
   
-  std::cout << "4\n";
   // create the tree
   HKmeansStep(0, features, 1);
 
-  std::cout << "5\n";
   // create the words
   createWords();
 
-  std::cout << "6\n";
   // and set the weight of each node of the tree
   setNodeWeights(training_features);
   
@@ -670,180 +666,166 @@ template<class TDescriptor, class F>
 void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id, 
   const std::vector<pDescriptor> &descriptors, int current_level)
 {
-  if(descriptors.empty()) return;
-        
-  // features associated to each cluster
-  std::vector<TDescriptor> clusters;
-  std::vector<std::vector<unsigned int> > groups;
-  clusters.reserve(m_k);  // m_k 한 노드에서 가질 자식 개수.
-	groups.reserve(m_k);    // cluster[i]가 k-means의 mean역할을 하고, 
-                          // 그 근처에 위치하는 descriptor들은 groups[i]에 인덱스로 저장. 
-                          // 이 인덱스는 descriptors vector의 인덱스 의미.
-  
-  //#############################################################################//
+    if(descriptors.empty()) return;
+    std::cout << "==[HKmeansStep]==\n";
 
-  std::cout << "1\n";
-  if((int)descriptors.size() <= m_k)
-  {
-    // A. Trivial case: one cluster per feature
-    groups.resize(descriptors.size());
-
-    for(unsigned int i = 0; i < descriptors.size(); i++)
-    {
-      groups[i].push_back(i);
-      clusters.push_back(*(descriptors[i]));
-    }
-  }
-  else
-  {
-    // B. Select clusters and groups with kmeans
+    // features associated to each cluster
+    std::vector<TDescriptor> clusters;
+    std::vector<std::vector<unsigned int> > groups;
+    clusters.reserve(m_k);  // m_k 한 노드에서 가질 자식 개수.
+    groups.reserve(m_k);    // cluster[i]가 k-means의 mean역할을 하고, 
+                            // 그 근처에 위치하는 descriptor들은 groups[i]에 인덱스로 저장. 
+                            // 이 인덱스는 descriptors vector의 인덱스 의미.
     
-    std::cout << "B\n"; int c=0;
-    bool first_time = true;
-    bool go_on = true;
-    
-    // to check if clusters move after iterations
-    std::vector<int> last_association, current_association;
+    //#############################################################################//
 
-    while(go_on)
+    if((int)descriptors.size() <= m_k)
     {
-      /* 1. Calculate clusters */ 
+      // A. Trivial case: one cluster per feature
+      groups.resize(descriptors.size());
 
-			if(first_time)
-			{
-        
-        std::cout << "init\n";
-        // random sample 
-        initiateClusters(descriptors, clusters);
-      }
-      else
+      for(unsigned int i = 0; i < descriptors.size(); i++)
       {
-        // calculate cluster centres
+        groups[i].push_back(i);
+        clusters.push_back(*(descriptors[i]));
+      }
+    }
+    else
+    {
+      // B. Select clusters and groups with kmeans
+      
+      std::cout << "B\n"; int cnt=0;
+      bool first_time = true;
+      bool go_on = true;
+      
+      // to check if clusters move after iterations
+      std::vector<int> last_association, current_association;
 
-        std::cout << (c++) << std::endl;
-        for(unsigned int c = 0; c < clusters.size(); ++c)
-        {
-          std::vector<pDescriptor> cluster_descriptors;
-          cluster_descriptors.reserve(groups[c].size());
-          
-          /*
-          for(unsigned int d = 0; d < descriptors.size(); ++d)
+      while(go_on)
+      {
+          /* 1. Calculate clusters */ 
+
+          if(first_time)
           {
-            if( assoc.find<unsigned char>(c, d) )
+              // random sample 
+              initiateClusters(descriptors, clusters);
+          }
+          else
+          {
+              // calculate cluster centres
+              std::cout << "B-" << (cnt++) << std::endl;
+              for(unsigned int c = 0; c < clusters.size(); ++c)
+              {
+                  std::vector<pDescriptor> cluster_descriptors;
+                  cluster_descriptors.reserve(groups[c].size());
+                  
+                  std::vector<unsigned int>::const_iterator vit;
+                  for(vit = groups[c].begin(); vit != groups[c].end(); ++vit)
+                  {
+                      cluster_descriptors.push_back(descriptors[*vit]);
+                  }
+                  
+                  // clusters[c]에 cluster_descriptors의 평균이 들어감.
+                  F::meanValue(cluster_descriptors, clusters[c]);
+              }
+          }
+
+          /* 2. Associate features with clusters */ 
+
+          // calculate distances to cluster centers
+          groups.clear();
+          groups.resize(m_k, std::vector<unsigned int>());
+          current_association.resize(descriptors.size());
+
+          // Group정보를 초기화하고 decriptors 각각을 가장 가까운 cluster에 할당.
+          typename std::vector<pDescriptor>::const_iterator fit;
+          for(fit = descriptors.begin(); fit != descriptors.end(); ++fit)
+          {
+              double best_dist = F::distance(*(*fit), clusters[0]);
+              unsigned int icluster = 0;
+              
+              for(unsigned int c = 1; c < clusters.size(); ++c)
+              {
+                  double dist = F::distance(*(*fit), clusters[c]); /* distance 쓰임 */
+                  if(dist < best_dist)
+                  {
+                      best_dist = dist;
+                      icluster = c;
+                  }
+              }
+
+              int fit_index = fit - descriptors.begin();
+              groups[icluster].push_back(fit_index);
+              current_association[fit_index] = icluster;
+          }
+          
+          // kmeans++ ensures all the clusters has any feature associated with them
+
+          // 3. check convergence
+          if(first_time)
+          {
+            first_time = false;
+          }
+          else
+          {
+            go_on = false;
+            for(unsigned int i = 0; i < current_association.size(); i++)
             {
-              cluster_descriptors.push_back(descriptors[d]);
+              if(current_association[i] != last_association[i]){
+                go_on = true;
+                break;
+              }
             }
           }
-          */
-          
-          std::vector<unsigned int>::const_iterator vit;
-          for(vit = groups[c].begin(); vit != groups[c].end(); ++vit)
+
+          if(go_on)
           {
-            cluster_descriptors.push_back(descriptors[*vit]);
+            // copy last feature-cluster association
+            last_association = current_association;
           }
           
-          // clusters[c]에 cluster_descriptors의 평균이 들어감.
-          F::meanValue(cluster_descriptors, clusters[c]);
-        }
-        
-      }
-
-      /* 2. Associate features with clusters */ 
-
-      // calculate distances to cluster centers
-      groups.clear();
-      groups.resize(m_k, std::vector<unsigned int>());
-      current_association.resize(descriptors.size());
-
-      // Group정보를 초기화하고 decriptors 각각을 가장 가까운 cluster에 할당.
-      typename std::vector<pDescriptor>::const_iterator fit;
-      for(fit = descriptors.begin(); fit != descriptors.end(); ++fit)
-      {
-        double best_dist = F::distance(*(*fit), clusters[0]);
-        unsigned int icluster = 0;
-        
-        for(unsigned int c = 1; c < clusters.size(); ++c)
-        {
-          double dist = F::distance(*(*fit), clusters[c]); /* distance 쓰임 */
-          if(dist < best_dist)
-          {
-            best_dist = dist;
-            icluster = c;
-          }
-        }
-
-        int fit_index = fit - descriptors.begin();
-        groups[icluster].push_back(fit_index);
-        current_association[fit_index] = icluster;
-      }
+        } //END while(go_on)
       
-      // kmeans++ ensures all the clusters has any feature associated with them
-
-      // 3. check convergence
-      if(first_time)
-      {
-        first_time = false;
-      }
-      else
-      {
-        go_on = false;
-        for(unsigned int i = 0; i < current_association.size(); i++)
-        {
-          if(current_association[i] != last_association[i]){
-            go_on = true;
-            break;
-          }
-        }
-      }
-
-			if(go_on)
-			{
-				// copy last feature-cluster association
-				last_association = current_association;
-			}
-			
-		} //END while(go_on)
+    } //END else B.
     
-  } //END else B.
-  
-  // create nodes // m_nodes는 Vocabulary의 벡터.
-  // m_k만큼 Node추가. 
-  // m_nodes는 부모 자식을 같이 쭉 push_back으로 넣고 자식들이 parent_id를 가지고 있게 함.
-  // m_nodes[i].children (Type) = vector<NodeID> 
-  for(unsigned int i = 0; i < clusters.size(); ++i)
-  {
-    NodeId id = m_nodes.size(); //가장 끝 index를 가지게함.
-    m_nodes.push_back(Node(id));
-    m_nodes.back().descriptor = clusters[i];
-    m_nodes.back().parent = parent_id;
-    m_nodes[parent_id].children.push_back(id);
-  }
-  
-  // go on with the next level
-  if(current_level < m_L)
-  {
-    // iterate again with the resulting clusters
-    const std::vector<NodeId> &children_ids = m_nodes[parent_id].children;
+    // create nodes // m_nodes는 Vocabulary의 벡터.
+    // m_k만큼 Node추가. 
+    // m_nodes는 부모 자식을 같이 쭉 push_back으로 넣고 자식들이 parent_id를 가지고 있게 함.
+    // m_nodes[i].children (Type) = vector<NodeID> 
     for(unsigned int i = 0; i < clusters.size(); ++i)
     {
-      NodeId id = children_ids[i];
-
-      std::vector<pDescriptor> child_features;
-      child_features.reserve(groups[i].size());
-
-      std::vector<unsigned int>::const_iterator vit;
-      for(vit = groups[i].begin(); vit != groups[i].end(); ++vit)
-      {
-        child_features.push_back(descriptors[*vit]);
-      }
-
-      if(child_features.size() > 1)
-      {
-        /* Recursive */
-        HKmeansStep(id, child_features, current_level + 1);
-      }
+        NodeId id = m_nodes.size(); //가장 끝 index를 가지게함.
+        m_nodes.push_back(Node(id));
+        m_nodes.back().descriptor = clusters[i];
+        m_nodes.back().parent = parent_id;
+        m_nodes[parent_id].children.push_back(id);
     }
-  }
+    
+    // go on with the next level
+    if(current_level < m_L)
+    {
+        // iterate again with the resulting clusters
+        const std::vector<NodeId> &children_ids = m_nodes[parent_id].children;
+        for(unsigned int i = 0; i < clusters.size(); ++i)
+        {
+            NodeId id = children_ids[i];
+
+            std::vector<pDescriptor> child_features;
+            child_features.reserve(groups[i].size());
+
+            std::vector<unsigned int>::const_iterator vit;
+            for(vit = groups[i].begin(); vit != groups[i].end(); ++vit)
+            {
+                child_features.push_back(descriptors[*vit]);
+            }
+
+            if(child_features.size() > 1)
+            {
+                /* Recursive */
+                HKmeansStep(id, child_features, current_level + 1);
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -884,7 +866,7 @@ void TemplatedVocabulary<TDescriptor,F>::initiateClustersKMpp
   // 4. Repeat Steps 2 and 3 until k centers have been chosen.
   // 5. Now that the initial centers have been chosen, proceed using standard k-means 
   //    clustering.
-  std::cout << "initiateClustersKMpp\n";
+  std::cout << "=[initiateClustersKMpp]=\n";
   
   clusters.resize(0);
   clusters.reserve(m_k);
@@ -892,31 +874,25 @@ void TemplatedVocabulary<TDescriptor,F>::initiateClustersKMpp
   std::vector<double> min_dists(pfeatures.size(), std::numeric_limits<double>::max());
   
   // 1. descriptor 중 랜덤하게 하나 선택.
-  std::cout << "1\n";
   int ifeature = RandomInt(0, pfeatures.size()-1);
   
   // create first cluster 
   //clusters[i]는 각 클러스터의 중심점의 역할을 한다. 여기서는 초기화이기 때문에 랜덤 선택하는것.
-  std::cout << "1.2\n";
-  clusters.push_back(*pfeatures[ifeature]);
+  clusters.push_back(*(pfeatures[ifeature]));
 
   // compute the initial distances
   typename std::vector<pDescriptor>::const_iterator fit;
   std::vector<double>::iterator dit;
-  std::cout << "1.4\n";
   dit = min_dists.begin();
   for(fit = pfeatures.begin(); fit != pfeatures.end(); ++fit, ++dit)
   {
-    std::cout << "1.6\n";
     *dit = F::distance(*(*fit), clusters.back());
   }  
 
 
-  std::cout << "2\n";
   while((int)clusters.size() < m_k)
   {
-
-    std::cout << "3\n";
+    std::cout << "Clusters Size: " << (int)clusters.size() << "\n";
     // 2. (1. 과정)을 반복. min_dist를 업데이트해준다는 것이 차이.
     dit = min_dists.begin();
     for(fit = pfeatures.begin(); fit != pfeatures.end(); ++fit, ++dit)
@@ -958,7 +934,6 @@ void TemplatedVocabulary<TDescriptor,F>::initiateClustersKMpp
       break;
       
   } // while(used_clusters < m_k)
-
 }
 
 // --------------------------------------------------------------------------
