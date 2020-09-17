@@ -28,10 +28,10 @@ const std::string dataset_dir = project_dir + "Dataset/";
 /***************************************************************************/
 
 void SuperpointVocCreation(const vector<vector<cv::Mat > > &features);
-void testDatabase(const vector<vector<cv::Mat > > &features);
+void TestDatabase(const vector<vector<cv::Mat > > &features);
 
 // number of training images
-int N_IMAGE;
+int N_IMAGE = 5;
 
 void wait()
 {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     std::cout << "VC created, SPDetector Constructed.\n";
 
     long long cnt = 0;
-    int t = 5;
+    int t = N_IMAGE;
     while(t--){
         if(!vs.next_frame()) 
         { 
@@ -123,9 +123,9 @@ int main(int argc, char* argv[])
 
     SuperpointVocCreation(features);
 
-    // wait();
+    wait();
 
-    // testDatabase(features);
+    TestDatabase(features);
 
     return 0;
 }
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 {
     // branching factor and depth levels 
-    const int k = 9;
+    const int k = 6;
     const int L = 3;
     const WeightingType weight = TF_IDF;
     const ScoringType scoring = L1_NORM;
@@ -182,18 +182,20 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 
 // ----------------------------------------------------------------------------
 
-void testDatabase(const vector<vector<cv::Mat > > &features)
+void TestDatabase(const vector<vector<cv::Mat > > &features)
 {
     cout << "Creating a small database..." << endl;
 
     // Load the vocabulary from disk
     SuperpointVocabulary voc("small_voc.yml.gz");
     
-    SuperpointDatabase db(voc, false, 0); // false = do not use direct index
+    SuperpointDatabase db(voc, false, 0); 
+    // false = do not use direct index
     // (so ignore the last param)
     // The direct index is useful if we want to retrieve the features that 
     // belong to some vocabulary node.
-    // db creates a copy of the vocabulary, we may get rid of "voc" now
+    // db creates a copy of the vocabulary, 
+    // we may get rid of "voc" now
 
     // add images to the database
     for(int i = 0; i < N_IMAGE; i++)
@@ -210,7 +212,7 @@ void testDatabase(const vector<vector<cv::Mat > > &features)
 
     // Vocabulary에 image에 대해 query. return type = QueryResults.
     QueryResults ret;
-    for(int i = 0; i < N_IMAGE; i++)
+    for(int i = 0; i < 5; i++)
     {
         db.query(features[i], ret, 4);
 
