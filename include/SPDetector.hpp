@@ -17,17 +17,10 @@ namespace SuperPointSLAM
 
 class SPDetector
 {
-private:
-    struct KeyPointNode{
-        cv::KeyPoint kpt;
-        int desc_idx;
-    };
-
 public:
 
     // Default Constuctor. No Use.
     SPDetector();
-
     /**
      * @brief Construct a new SPDetector::SPDetector object. 
      * When Initialize SPDetector, (1) First we initialize 
@@ -40,58 +33,49 @@ public:
      */
     SPDetector(std::string _weight_dir, bool _use_cuda);
     
+    ~SPDetector(){}
+
     /**
      * @brief Detect input image's Keypoints and Compute Descriptor.
      * 
      * @param img Input image. We use img's deep copy object.
      * @return cv::Mat 
      */
-    cv::Mat* detect(cv::Mat &img);
+    void detect(cv::InputArray _image, cv::InputArray _mask, std::vector<cv::KeyPoint>& _keypoints,
+                      cv::OutputArray _descriptors);
 
-    void fast_nms(cv::Mat& desc_no_nms, cv::Mat& desc_nms, int img_width, int img_height);
-    
-    void NMS2
-    (std::vector<cv::KeyPoint> det, cv::Mat conf, 
-     std::vector<cv::KeyPoint>& pts, int border, 
-     int dist_thresh, int img_width, int img_height);
-    
-    void getKeyPoints(float threshold, int iniX, int maxX, int iniY, int maxY, std::vector<cv::KeyPoint> &keypoints, bool nms);
-    
-    void computeDescriptors(cv::Mat& descriptors);
-
-    std::vector<KeyPointNode> kpts_node_nms;
-    std::vector<cv::KeyPoint> kpts_nms;
-    cv::Mat kpts_loc;               ///
-    cv::Mat kpts_conf;              ///
-    cv::Mat descriptors;
     int n_keypoints;
 
 private:
-    std::shared_ptr<SuperPoint> model;  /// Superpoint model                
-    
+    std::shared_ptr<SuperPoint> model;  // Superpoint model object                
+    c10::TensorOptions tensor_opts;     // Contains necessary info for creating proper at::Tensor
+    c10::DeviceType mDeviceType;        // If our device can use the GPU, it has 'kCUDA', otherwise it has 'kCPU'.
+    c10::Device mDevice;                // c10::Device corresponding to mDeviceType.
 
-    // kFloat32, kStrided, requires_grad(false), cpu or gpu device.
-    c10::TensorOptions tensor_opts;     
-    c10::DeviceType mDeviceType;      
-    c10::Device mDevice;
-
-    // Superpoint Output Probability Tensor
-    torch::Tensor mProb;              
-    // Superpoint Output Descriptor Tensor
-    torch::Tensor mDesc;              
+   
+    torch::Tensor mProb; // Superpoint Output Probability Tensor              
+    torch::Tensor mDesc; // Superpoint Output Descriptor Tensor               
     
+    /**
+     * kpts is [H, W] size Tensor. 
+     * Its elements has 1 if there is a featrue, and 0 otherwise. 
+     * After this function, kpts Tensor can guarantee that 
+     * no overlapping feature points exist in each 3x3 patch.
+     * 
+     * This function is executed on the CPU because it requires direct access 
+     * to the tensor elements. Therefore, in some cases, (Specifically, if 
+     * detect() is done on the GPU,) performance can be greatly impaired  
+     * because of the data travel time You can turn this option on and off 
+     * using the 'nms' member variable.
+     */
     void SemiNMS(at::Tensor& kpts);
+    bool nms = true; // SemiNMS() on/off flag.
                     
     float conf_thres=0.0625;             /// 각 픽셀의 기댓값: 1/64 = 0.015625
     float nn_thres;                     ///
     bool verbose = 0;                   ///
     
-    // NMS parameters. (Not use now.)
-    bool nms = false;
-    int MAX_KEYPOINT = 100;           
-    int nms_border = 8;               
-    int nms_dist_thres = 4;           
-    float nms_dist;   
+    
 };
 
 }

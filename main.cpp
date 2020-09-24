@@ -51,22 +51,26 @@ int main(const int argc, char* argv[])
         // Image's size is [640 x 480]
         if(!vs.next_frame()) { std::cout << "main -- Video End\n"; break; }
 
+        std::vector<cv::KeyPoint> Keypoints;
+        cv::Mat Descriptors;
 
         auto start = std::chrono::system_clock::now();
-        auto descriptors = SPF.detect(vs.input);
+        SPF.detect(vs.input, cv::Mat(), Keypoints, Descriptors);
         auto end = std::chrono::system_clock::now();
         std::chrono::milliseconds mill  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         
-        
-        //SPF.computeDescriptors(desciptors);
-        std::cout << idx << "-th Processing time: " << mill.count() << "ms\n";
+        /* Logging */
+        std::cout << idx << "th ProcessTime: " << mill.count() << "ms\n";
+        std::cout << "Keypoint num: " << Keypoints.size() << std::endl;
+
         float x_scale(vs.W_scale), y_scale(vs.H_scale);
 
-        auto ptr = SPF.kpts_loc.ptr<float>();
-        for(int i=0; i < SPF.n_keypoints; i++)
+        auto kpt_iter = Keypoints.begin();
+        for(; kpt_iter != Keypoints.end(); kpt_iter++)
         {
-            float X(*(ptr++)), Y(*(ptr++));
-            cv::circle(vs.img, cv::Point(int(X*x_scale), int(Y*y_scale)), 3, cv::Scalar(255, 0, 255), 2);
+            float X(kpt_iter->pt.x), Y(kpt_iter->pt.y);
+            double conf(kpt_iter->response);
+            cv::circle(vs.img, cv::Point(int(X*x_scale), int(Y*y_scale)), 3, cv::Scalar(0, 0, (255 * conf * 10)), 2);
         }
 
         // Display the resulting frame
