@@ -23,6 +23,7 @@ using namespace SuperPointSLAM;
 
 /**  You need to modify the path below that corresponds to your dataset and weight path. **/
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
+const std::string Dataset_dir = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480";
 const std::string weight_dir = project_dir + "Weights/superpoint.pt";
 const std::string dataset_dir = project_dir + "Dataset/";
 /***************************************************************************/
@@ -86,46 +87,32 @@ int main(int argc, char* argv[])
     std::cout << "VC created, SPDetector Constructed.\n";
 
     long long cnt = 0;
+    long long n_features = 0;
     int t = N_IMAGE;
-    while(t--){
-        if(!vs.next_frame()) 
-        { 
-            std::cout << "main -- Image End\n"; 
-            break; 
-        }
+    while(vs.next_frame()){
 
         features.push_back(vector<cv::Mat>());
         features[cnt].resize(0);
 
+        // SPDetector -> feature extract.
         cv::Mat* descriptors = SPF.detect(vs.input);  // [N_kpts, 256]  Size format:[W, H]
+
+        // Insert descriptors to "featrues".
         int len = descriptors->size().height;
-
         for(unsigned i = 0; i < len; i++)
-        {
-            //std::cout << "======================< " << i << " >======================\n"; 
-            //std::cout << descriptors->row(i) << std::endl;
             features[cnt].push_back(descriptors->row(i));
-            //getchar();
-        }
         
-
-        // for(unsigned i = 0; i<3; i++)
-        // {   
-        //     auto m = features[cnt][i];
-        //     std::cout << m.isContinuous() << std::endl;
-        //     std::cout << m.size() << std::endl;
-        //     wait();
-        // }
-        
-
+        n_features += features[cnt].size();
         cnt++;  
     }
+
+    std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
 
     SuperpointVocCreation(features);
 
     wait();
 
-    TestDatabase(features);
+    // TestDatabase(features);
 
     return 0;
 }

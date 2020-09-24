@@ -33,7 +33,7 @@ include_directories(${ZED_INCLUDE_DIRS})
 ### SUB_DIRECTORIES
 add_subdirectory(src)
 add_subdirectory(CreateVoca)
-#add_subdirectory(zed)
+# add_subdirectory(zed)
 
 ###
 add_executable(main main_SuperPoint.cpp)
@@ -53,8 +53,8 @@ add_executable(Test main.cpp)
 target_compile_features(Test PUBLIC cxx_std_14)
 target_link_libraries(Test PUBLIC 
 Super
-${TORCH_LIBRARIES}
-${OpenCV_LIBS}
+# ${TORCH_LIBRARIES}
+# ${OpenCV_LIBS}
 )
 set_target_properties(Test PROPERTIES
 RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
@@ -65,18 +65,10 @@ add_executable(CreateVoca main_CreateVoca.cpp)
 target_link_libraries(CreateVoca PUBLIC 
 Super
 DBoW2
-${TORCH_LIBRARIES}
-${OpenCV_LIBS}
-)
-target_include_directories(CreateVoca PUBLIC 
-"${CMAKE_HOME_DIRECTORY}/CreateVoca/include"
+# ${TORCH_LIBRARIES}
+# ${OpenCV_LIBS}
 )
 set_target_properties(CreateVoca PROPERTIES
 CXX_STANDARD 14
 RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
 )
-
-
-# target_include_directories(main
-# PUBLIC  ${PROJECT_SOURCE_DIR}/include
-# )

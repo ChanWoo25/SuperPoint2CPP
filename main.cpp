@@ -26,6 +26,7 @@ int main(const int argc, char* argv[])
     /** Initialize VideoSteamer and SuperPoint Object **/ 
     // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
     // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
+    // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Denoise10/p%5d.png");
     VideoStreamer vs(0);
     //VideoStreamer vs("/home/leecw/Datasets/Kitti_Post/00/K%4d.png");
     //vs.setImageSize(cv::Size(720, 240));

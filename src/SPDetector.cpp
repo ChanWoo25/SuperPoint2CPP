@@ -136,7 +136,7 @@ cv::Mat* SPDetector::detect(cv::Mat &img)
 
     memcpy((void*)descriptors.data, mDesc.data_ptr(), sizeof(float) * mDesc.numel());
     // descriptors = cv::Mat(desc_size, CV_32FC1, mDesc.data_ptr<float>());
-    mDesc.is_contiguous()
+    
 
     // Convert Keypoint
     // From torch::Tensor   kpts(=keypoints)
