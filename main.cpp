@@ -55,7 +55,7 @@ int main(const int argc, char* argv[])
         cv::Mat Descriptors;
 
         auto start = std::chrono::system_clock::now();
-        SPF.detect(vs.input, cv::Mat(), Keypoints, Descriptors);
+        SPF.detect(vs.input, Keypoints, Descriptors);
         auto end = std::chrono::system_clock::now();
         std::chrono::milliseconds mill  = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         

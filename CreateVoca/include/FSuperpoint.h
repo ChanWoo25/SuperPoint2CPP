@@ -10,7 +10,7 @@
 #ifndef __D_T_F_SUPERPOINT__
 #define __D_T_F_SUPERPOINT__
 
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 #include <vector>
 #include <string>
 #include <iostream>

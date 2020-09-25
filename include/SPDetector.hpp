@@ -41,8 +41,8 @@ public:
      * @param img Input image. We use img's deep copy object.
      * @return cv::Mat 
      */
-    void detect(cv::InputArray _image, cv::InputArray _mask, std::vector<cv::KeyPoint>& _keypoints,
-                      cv::OutputArray _descriptors);
+    void detect(cv::InputArray _image, std::vector<cv::KeyPoint>& _keypoints,
+                      cv::Mat &_descriptors);
 
     int n_keypoints;
 

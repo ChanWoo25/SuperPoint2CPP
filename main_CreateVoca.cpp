@@ -31,8 +31,7 @@ const std::string dataset_dir = project_dir + "Dataset/";
 void SuperpointVocCreation(const vector<vector<cv::Mat > > &features);
 void TestDatabase(const vector<vector<cv::Mat > > &features);
 
-// number of training images
-int N_IMAGE = 5;
+static int N_IMG = 40;
 
 void wait()
 {
@@ -75,12 +74,13 @@ int main(int argc, char* argv[])
         cout << DATA_PATH << endl;
     }
 
-
     // test();
 
-
     vector< vector<cv::Mat> > features;
-    VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
+    cv::String dpath_1 = "/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png";
+    cv::String dpath_2 = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480/P%05d.png";
+    VideoStreamer vs(dpath_2);
+    
 
     /** Superpoint Detector **/
     SPDetector SPF(weight_dir, torch::cuda::is_available());
@@ -88,31 +88,35 @@ int main(int argc, char* argv[])
 
     long long cnt = 0;
     long long n_features = 0;
-    int t = N_IMAGE;
-    while(vs.next_frame()){
+    int t = N_IMG;
+    while(vs.next_frame() && ((1) >= 0)){
 
         features.push_back(vector<cv::Mat>());
         features[cnt].resize(0);
 
         // SPDetector -> feature extract.
-        cv::Mat* descriptors = SPF.detect(vs.input);  // [N_kpts, 256]  Size format:[W, H]
+        cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
+        std::vector<cv::KeyPoint> keypoints;
+        SPF.detect(vs.input, keypoints, descriptors);  
 
         // Insert descriptors to "featrues".
-        int len = descriptors->size().height;
+        int len = keypoints.size();
         for(unsigned i = 0; i < len; i++)
-            features[cnt].push_back(descriptors->row(i));
+            features[cnt].push_back(descriptors.row(i));
         
         n_features += features[cnt].size();
         cnt++;  
     }
 
+    N_IMG = cnt;
+    std::cout << "\nFrom " << N_IMG << " images ... ";
     std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
 
     SuperpointVocCreation(features);
 
     wait();
 
-    // TestDatabase(features);
+    TestDatabase(features);
 
     return 0;
 }
@@ -127,10 +131,10 @@ int main(int argc, char* argv[])
 void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 {
     // branching factor and depth levels 
-    const int k = 6;
-    const int L = 3;
+    const int k = 10;
+    const int L = 5;
     const WeightingType weight = TF_IDF;
-    const ScoringType scoring = L1_NORM;
+    const ScoringType scoring = L2_NORM;
 
     SuperpointVocabulary voc(k, L, weight, scoring);
 
@@ -147,23 +151,25 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
     // voc를 클래스로 하여 feature정보를 BoWVector Type으로 변환하여 scoring 가능.
     // 기억을 되살리자면, BoWVector란, Vocabulary에 들어있는 word의 히스토그램을 얻고
     // 분별력을 더하기 위해 TF-IDF reweighting을 하여 얻은 벡터이다.
-    cout << "Matching images against themselves (0 low, 1 high): " << endl;
-    BowVector v1, v2;
-    for(int i = 0; i < N_IMAGE; i++)
-    {
-        voc.transform(features[i], v1);
-        for(int j = 0; j < N_IMAGE; j++)
-        {
-            voc.transform(features[j], v2);
+    // cout << "Matching images against themselves (0 low, 1 high): " << endl;
+
+    // BowVector v1, v2;
+    // for(int i = 0; i < N_IMG; i++)
+    // {
+    //     voc.transform(features[i], v1);
+    //     for(int j = 0; j < N_IMG; j++)
+    //     {
+    //         voc.transform(features[j], v2);
             
-            double score = voc.score(v1, v2);
-            cout << "Image " << i << " vs Image " << j << ": " << score << endl;
-        }
-    }
+    //         double score = voc.score(v1, v2);
+    //         if(score >= 0.3)
+    //             cout << "Image " << i << " vs Image " << j << ": " << score << endl;
+    //     }
+    // }
 
     // save the vocabulary to disk
     cout << endl << "Saving vocabulary..." << endl;
-    voc.save("small_voc.yml.gz");
+    voc.save("SP_voc_v2.yml.gz");
     cout << "Done" << endl;
 }
 
@@ -174,9 +180,9 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     cout << "Creating a small database..." << endl;
 
     // Load the vocabulary from disk
-    SuperpointVocabulary voc("small_voc.yml.gz");
+    SuperpointVocabulary voc("SP_voc_v2.yml.gz");
     
-    SuperpointDatabase db(voc, false, 0); 
+    SuperpointDatabase db(voc, true, 0); 
     // false = do not use direct index
     // (so ignore the last param)
     // The direct index is useful if we want to retrieve the features that 
@@ -185,7 +191,7 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     // we may get rid of "voc" now
 
     // add images to the database
-    for(int i = 0; i < N_IMAGE; i++)
+    for(int i = 0; i < N_IMG; i++)
     {
         db.add(features[i]);
     }
@@ -199,15 +205,15 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
 
     // Vocabulary에 image에 대해 query. return type = QueryResults.
     QueryResults ret;
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < N_IMG; i+=40)
     {
-        db.query(features[i], ret, 4);
+        db.query(features[i], ret, 10);
 
         // ret[0] is always the same image in this case, because we added it to the 
         // database. ret[1] is the second best match.
 
         // QueryResults 타입의 변수도 Cout으로 출력을 지원.
-        cout << "Searching for Image " << i << ". " << ret << endl;
+        cout << "\n[Searching for Image " << i << ". " << ret << "]\n";
     }
 
     cout << endl;
@@ -215,12 +221,12 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     // we can save the database. The created file includes the vocabulary
     // and the entries added
     cout << "Saving database..." << endl;
-    db.save("small_db.yml.gz");
+    db.save("SP_db_v2.yml.gz");
     cout << "... done!" << endl;
     
     // once saved, we can load it again  
     cout << "Retrieving database once again..." << endl;
-    SuperpointDatabase db2("small_db.yml.gz");
+    SuperpointDatabase db2("SP_db_v2.yml.gz");
     cout << "... done! This is: " << endl << db2 << endl;
 }
 

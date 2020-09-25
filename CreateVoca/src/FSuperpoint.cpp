@@ -27,7 +27,6 @@ void FSUPERPOINT::meanValue(const std::vector<FSUPERPOINT::pDescriptor> &descrip
 {
   if(descriptors.empty())
   {
-    mean.release();
     return;
   }
   else if(descriptors.size() == 1)

@@ -56,8 +56,8 @@ SPDetector::SPDetector(std::string _weight_dir, bool _use_cuda)
     model->eval();
 }
 
-void SPDetector::detect(cv::InputArray _image, cv::InputArray _mask, std::vector<cv::KeyPoint>& _keypoints,
-                      cv::OutputArray _descriptors)
+void SPDetector::detect(cv::InputArray _image, std::vector<cv::KeyPoint>& _keypoints,
+                      cv::Mat &_descriptors)
 {
     cv::Mat img = _image.getMat();
     at::Tensor x = torch::from_blob((void*)img.clone().data, \
@@ -110,12 +110,10 @@ void SPDetector::detect(cv::InputArray _image, cv::InputArray _mask, std::vector
     n_keypoints = mDesc.size(0); 
     
     // [256, N], CV_32F
-    cv::Mat descriptors = _descriptors.getMat();
-    descriptors.create(n_keypoints, 256, CV_32FC1);
-
-    memcpy((void*)descriptors.data, mDesc.data_ptr(), sizeof(float) * mDesc.numel());
+    _descriptors.create(n_keypoints, 256, CV_32FC1);
+    memcpy((void*)_descriptors.data, mDesc.data_ptr(), sizeof(float) * mDesc.numel());
     // descriptors = cv::Mat(desc_size, CV_32FC1, mDesc.data_ptr<float>());
-    
+    // std::cout << _descriptors.row(0) << std::endl;
 
     /* Convert Keypoint
      * From torch::Tensor   kpts(=keypoints)
