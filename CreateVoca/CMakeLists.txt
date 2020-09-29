@@ -35,7 +35,7 @@ target_include_directories(DBoW2 PUBLIC
 )
 target_link_libraries(DBoW2 ${OpenCV_LIBS})
 set_target_properties(DBoW2 PROPERTIES 
-CXX_STANDARD 14
+CXX_STANDARD 11
 LIBRARY_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/lib"
 )
 

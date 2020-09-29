@@ -36,8 +36,8 @@ void FSUPERPOINT::meanValue(const std::vector<FSUPERPOINT::pDescriptor> &descrip
   else
   {
     size_t len = descriptors.size();
-    
-    for(auto iter=descriptors.begin(); iter != descriptors.end(); ++iter)
+    std::vector<DBoW2::FSUPERPOINT::pDescriptor>::const_iterator iter;
+    for(iter = descriptors.begin(); iter != descriptors.end(); ++iter)
     {
         mean +=  *(*iter);
     }
@@ -71,7 +71,7 @@ double FSUPERPOINT::distance(const FSUPERPOINT::TDescriptor &a,
 std::string FSUPERPOINT::toString(const FSUPERPOINT::TDescriptor &a)
 {
   stringstream ss;
-  auto ptr = a.ptr<float>(0);
+  const float *ptr = a.ptr<float>(0);
   for(int i=0; i<FSUPERPOINT::L; i++){
       ss << *(ptr+i) << " ";
   }

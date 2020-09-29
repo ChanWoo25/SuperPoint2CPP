@@ -7,6 +7,7 @@ using namespace SuperPointSLAM;
 const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
 const std::string weight_dir = project_dir + "Weights/superpoint.pt";
 const std::string dataset_dir = project_dir + "Dataset/";
+const std::string kitti_dir = "/home/leecw/Datasets/kitti_gray_dataset/sequences/00/image_0/%06d.png";
 void test();
 
 
@@ -27,9 +28,9 @@ int main(const int argc, char* argv[])
     // VideoStreamer vs("../Dataset/nyu_snippet.mp4");
     // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png");
     // VideoStreamer vs("/home/leecw/Datasets/Soongsil_Denoise10/p%5d.png");
-    VideoStreamer vs(0);
-    //VideoStreamer vs("/home/leecw/Datasets/Kitti_Post/00/K%4d.png");
-    //vs.setImageSize(cv::Size(720, 240));
+    // VideoStreamer vs(0);
+    VideoStreamer vs(kitti_dir);
+    vs.setImageSize(cv::Size(720, 240));
     
     
     /** Superpoint Detector **/

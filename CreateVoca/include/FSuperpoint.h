@@ -22,10 +22,6 @@ namespace DBoW2 {
 //########################################################################
 // Functions to manipulate vector CV_32FC1 [1, 256] descriptors
 
-/**
- * @brief 
- * 
- */
 class FSUPERPOINT: protected FClass
 {
 public:

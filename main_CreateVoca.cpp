@@ -39,6 +39,15 @@ void wait()
     getchar();
 }
 
+
+void yml2txt(){
+    
+    // Load the vocabulary from disk
+    SuperpointVocabulary voc("SP_voc_v2.yml.gz");
+    voc.saveToTextFile("SPVoc1.txt");
+
+}
+
 void test()
 {
 
@@ -76,47 +85,49 @@ int main(int argc, char* argv[])
 
     // test();
 
-    vector< vector<cv::Mat> > features;
-    cv::String dpath_1 = "/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png";
-    cv::String dpath_2 = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480/P%05d.png";
-    VideoStreamer vs(dpath_2);
+    yml2txt();
+
+    // vector< vector<cv::Mat> > features;
+    // cv::String dpath_1 = "/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png";
+    // cv::String dpath_2 = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480/P%05d.png";
+    // VideoStreamer vs(dpath_2);
     
 
-    /** Superpoint Detector **/
-    SPDetector SPF(weight_dir, torch::cuda::is_available());
-    std::cout << "VC created, SPDetector Constructed.\n";
+    // /** Superpoint Detector **/
+    // SPDetector SPF(weight_dir, torch::cuda::is_available());
+    // std::cout << "VC created, SPDetector Constructed.\n";
 
-    long long cnt = 0;
-    long long n_features = 0;
-    int t = N_IMG;
-    while(vs.next_frame() && ((1) >= 0)){
+    // long long cnt = 0;
+    // long long n_features = 0;
+    // int t = N_IMG;
+    // while(vs.next_frame() && ((1) >= 0)){
 
-        features.push_back(vector<cv::Mat>());
-        features[cnt].resize(0);
+    //     features.push_back(vector<cv::Mat>());
+    //     features[cnt].resize(0);
 
-        // SPDetector -> feature extract.
-        cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
-        std::vector<cv::KeyPoint> keypoints;
-        SPF.detect(vs.input, keypoints, descriptors);  
+    //     // SPDetector -> feature extract.
+    //     cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
+    //     std::vector<cv::KeyPoint> keypoints;
+    //     SPF.detect(vs.input, keypoints, descriptors);  
 
-        // Insert descriptors to "featrues".
-        int len = keypoints.size();
-        for(unsigned i = 0; i < len; i++)
-            features[cnt].push_back(descriptors.row(i));
+    //     // Insert descriptors to "featrues".
+    //     int len = keypoints.size();
+    //     for(unsigned i = 0; i < len; i++)
+    //         features[cnt].push_back(descriptors.row(i));
         
-        n_features += features[cnt].size();
-        cnt++;  
-    }
+    //     n_features += features[cnt].size();
+    //     cnt++;  
+    // }
 
-    N_IMG = cnt;
-    std::cout << "\nFrom " << N_IMG << " images ... ";
-    std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
+    // N_IMG = cnt;
+    // std::cout << "\nFrom " << N_IMG << " images ... ";
+    // std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
 
-    SuperpointVocCreation(features);
+    // // SuperpointVocCreation(features);
 
-    wait();
+    // // wait();
 
-    TestDatabase(features);
+    // TestDatabase(features);
 
     return 0;
 }
@@ -175,12 +186,14 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 
 // ----------------------------------------------------------------------------
 
+
 void TestDatabase(const vector<vector<cv::Mat > > &features)
 {
     cout << "Creating a small database..." << endl;
 
     // Load the vocabulary from disk
     SuperpointVocabulary voc("SP_voc_v2.yml.gz");
+
     
     SuperpointDatabase db(voc, true, 0); 
     // false = do not use direct index

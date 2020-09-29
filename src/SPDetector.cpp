@@ -45,7 +45,7 @@ SPDetector::SPDetector(std::string _weight_dir, bool _use_cuda)
     /* SuperPoint model loading */
     model = std::make_shared<SuperPoint>();
     torch::load(model, _weight_dir);
-
+    
     /* This option should be done exactly as below */
     tensor_opts = c10::TensorOptions()
                         .dtype(torch::kFloat32)
