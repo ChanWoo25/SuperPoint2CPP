@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12...3.18)
+cmake_minimum_required(VERSION 3.2)
 
 project(
 SuperPointCpp   
@@ -12,6 +12,7 @@ set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." F
 ### LIBTORCH
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/libtorch")
 find_package(Torch REQUIRED QUIET)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 include_directories(${TORCH_INCLUDE_DIRS})
 ###
 
@@ -23,30 +24,30 @@ message(STATUS "Found OpenCV libraries is ${OpenCV_LIBS}")
 include_directories(${OpenCV_INCLUDE_DIRS})
 ###
 
-### ZED & CUDA
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/zed")
-find_package(ZED 3 REQUIRED)
-find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
-include_directories(${ZED_INCLUDE_DIRS})
-###
+# ### ZED & CUDA
+# set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "/usr/local/zed")
+# find_package(ZED 3 REQUIRED)
+# find_package(CUDA ${ZED_CUDA_VERSION} EXACT REQUIRED)
+# include_directories(${ZED_INCLUDE_DIRS})
+# ###
 
 ### SUB_DIRECTORIES
 add_subdirectory(src)
 add_subdirectory(CreateVoca)
 # add_subdirectory(zed)
 
-###
-add_executable(main main_SuperPoint.cpp)
-target_compile_features(main PUBLIC cxx_std_14)
-target_link_libraries(main PUBLIC 
-superpoint
-#libzed
-${TORCH_LIBRARIES}
-${OpenCV_LIBS}
-)
-set_target_properties(main PROPERTIES
-RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
-)
+# ### Deprecated ###
+# add_executable(main main_SuperPoint.cpp)
+# target_compile_features(main PUBLIC cxx_std_14)
+# target_link_libraries(main PUBLIC 
+# superpoint
+# #libzed
+# ${TORCH_LIBRARIES}
+# ${OpenCV_LIBS}
+# )
+# set_target_properties(main PROPERTIES
+# RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
+# )
 
 ### Runfile to test new Framework.
 add_executable(Test main.cpp)
