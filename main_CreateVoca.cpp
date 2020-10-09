@@ -22,30 +22,18 @@ using namespace std;
 using namespace SuperPointSLAM;
 
 /**  You need to modify the path below that corresponds to your dataset and weight path. **/
-const std::string project_dir = "/home/leecw/Reps/SuperPoint2CPP/";
-const std::string Dataset_dir = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480";
-const std::string weight_dir = project_dir + "Weights/superpoint.pt";
-const std::string dataset_dir = project_dir + "Dataset/";
+const std::string weight_dir = "./Weights/superpoint.pt";
 /***************************************************************************/
 
 void SuperpointVocCreation(const vector<vector<cv::Mat > > &features);
 void TestDatabase(const vector<vector<cv::Mat > > &features);
 
-static int N_IMG = 40;
+static int N_IMG = 10;
 
 void wait()
 {
     cout << endl << "Press enter to continue" << endl;
     getchar();
-}
-
-
-void yml2txt(){
-    
-    // Load the vocabulary from disk
-    SuperpointVocabulary voc("SP_voc_v2.yml.gz");
-    voc.saveToTextFile("SPVoc1.txt");
-
 }
 
 void test()
@@ -76,54 +64,51 @@ void test()
 
 int main(int argc, char* argv[])
 {
-    cv::String DATA_PATH;
+    cv::String DATA_PATH = "/home/leecw/Dataset/place365gray/%6d.png";
     if(argc == 2)
     {
         DATA_PATH = cv::String(argv[1]);
         cout << DATA_PATH << endl;
     }
 
-    // test();
-
-    yml2txt();
-
-    // vector< vector<cv::Mat> > features;
-    // cv::String dpath_1 = "/home/leecw/Datasets/Soongsil_Post/SoongsilMixed%4d.png";
-    // cv::String dpath_2 = "/home/leecw/Datasets/Final_Dataset_Denoise10_640_480/P%05d.png";
-    // VideoStreamer vs(dpath_2);
+    vector< vector<cv::Mat> > features;
+    VideoStreamer vs(DATA_PATH);
     
 
-    // /** Superpoint Detector **/
-    // SPDetector SPF(weight_dir, torch::cuda::is_available());
-    // std::cout << "VC created, SPDetector Constructed.\n";
+    /** Superpoint Detector **/
+    SPDetector SPF(weight_dir, torch::cuda::is_available());
+    std::cout << "VC created, SPDetector Constructed.\n";
 
-    // long long cnt = 0;
-    // long long n_features = 0;
-    // int t = N_IMG;
-    // while(vs.next_frame() && ((1) >= 0)){
+    long long n_features = 0;
+    int t = N_IMG;
 
-    //     features.push_back(vector<cv::Mat>());
-    //     features[cnt].resize(0);
+    long long cnt = 0;
+    while(vs.next_frame()){
 
-    //     // SPDetector -> feature extract.
-    //     cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
-    //     std::vector<cv::KeyPoint> keypoints;
-    //     SPF.detect(vs.input, keypoints, descriptors);  
+        features.push_back(vector<cv::Mat>());
+        features[cnt].resize(0);
 
-    //     // Insert descriptors to "featrues".
-    //     int len = keypoints.size();
-    //     for(unsigned i = 0; i < len; i++)
-    //         features[cnt].push_back(descriptors.row(i));
+        /* Feature extraction */
+        cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
+        std::vector<cv::KeyPoint> keypoints;
+        SPF.detect(vs.input, keypoints, descriptors);  
+
+        // Insert descriptors to "featrues".
+        int len = keypoints.size();
+        for(unsigned i = 0; i < len; i++)
+            features[cnt].push_back(descriptors.row(i));
         
-    //     n_features += features[cnt].size();
-    //     cnt++;  
-    // }
+        /* Count */
+        n_features += features[cnt].size(); cnt++;  
+        cout << descriptors.size().height << ' ';
+        if(cnt%10 == 0) cout << endl;
+    }
 
-    // N_IMG = cnt;
-    // std::cout << "\nFrom " << N_IMG << " images ... ";
-    // std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
+    N_IMG = cnt;
+    std::cout << "\nFrom " << N_IMG << " images ... ";
+    std::cout << "\nAll features extracted. [ Total: " << n_features << " ]\n";
 
-    // // SuperpointVocCreation(features);
+    SuperpointVocCreation(features);
 
     // // wait();
 
@@ -139,7 +124,7 @@ int main(int argc, char* argv[])
  * 
  * @param features loadfeature()를 통해 얻는 features 이중 벡터를 이용.
  */
-void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
+void SuperpointVocCreation(const vector<vector<cv::Mat>> &features)
 {
     // branching factor and depth levels 
     const int k = 10;
@@ -149,14 +134,15 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 
     SuperpointVocabulary voc(k, L, weight, scoring);
 
-    cout << "Creating a small " << k << "^" << L << " vocabulary..." << endl;
+    cout << "Creating a Big " << k << "^" << L << " SuperPoint Vocabulary..." << endl;
     /* Vocabulary 생성 함수 */
     voc.create(features);
     cout << "... done!" << endl;
 
     // cout을 이용한 vocabulary 정보 출력 가능.
     cout << "Vocabulary information: " << endl
-    << voc << endl << endl;
+            << voc << endl << endl;
+    cout << "NumOfWords:" << voc.NumOfWords << endl;
 
     // lets do something with this vocabulary
     // voc를 클래스로 하여 feature정보를 BoWVector Type으로 변환하여 scoring 가능.
@@ -180,7 +166,7 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 
     // save the vocabulary to disk
     cout << endl << "Saving vocabulary..." << endl;
-    voc.save("SP_voc_v2.yml.gz");
+    voc.saveToTextFile("SPVoc0_Iter1000_Img18000.txt");
     cout << "Done" << endl;
 }
 
