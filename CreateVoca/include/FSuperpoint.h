@@ -42,10 +42,9 @@ public:
     TDescriptor &mean);
   
   /**
-   * Calculates the distance between two descriptors
-   * @param a
-   * @param b
-   * @return distance
+   * Calculates the distance between two descriptors using L1-norm method.
+   * Since SuperPoint's descriptors have float type elements, 
+   * it was concluded that the result of L2 norm was not good for a larger amount of computation.
    */
   static double distance(const TDescriptor &a, const TDescriptor &b);
   

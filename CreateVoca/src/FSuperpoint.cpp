@@ -57,17 +57,8 @@ double FSUPERPOINT::distance(const FSUPERPOINT::TDescriptor &a,
     exit(1);
   }
 
-  // TDescriptor dist = a - b;
-  // dist = dist * dist.t();
-
-  // double s = dist.at<float>(0);
-  // s /= FSUPERPOINT::L;
-
-  TDescriptor dist = a - b;
-  double s = cv::sum(dist)[0];
-  s /= FSUPERPOINT::L;
-
-  return s;
+  TDescriptor dist = cv::abs(a - b);
+  return double(cv::sum(dist)[0]) / FSUPERPOINT::L;
 }
 
 // --------------------------------------------------------------------------
