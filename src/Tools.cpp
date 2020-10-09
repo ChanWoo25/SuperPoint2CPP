@@ -5,7 +5,9 @@ cv::Mat VideoStreamer::read_image(const cv::String& path)
     cv::Mat gray_img = cv::imread(path, cv::IMREAD_GRAYSCALE);
     // resampling using pixel area relation
     // resize(input, output, Size, scale_factor_x, scale_factor_y, interpolation_method)
-    cv::resize(gray_img, gray_img, input_size, 0, 0, cv::INTER_AREA);
+    if(pImgSize != NULL)
+        cv::resize(gray_img, gray_img, (*pImgSize), 0, 0, cv::INTER_AREA);
+    
     if(gray_img.empty()){
         std::cerr << "Error reading image.\n";
         exit('2');
@@ -25,12 +27,16 @@ bool VideoStreamer::next_frame()
             return false;
         }
         input = img.clone();
-        cv::resize(input, input, input_size, 1., 1., cv::INTER_AREA);
+
+        if(pImgSize != NULL)
+            cv::resize(input, input, (*pImgSize), 1., 1., cv::INTER_AREA);
+        
         cv::cvtColor(input, input, cv::COLOR_RGB2GRAY);
         input.convertTo(input, CV_32F);
     }
     else if(img_source == input_device::IS_VIDEO_FILE)
     {
+        /* Read next image. Return false if failed.*/
         if(!cap.read(img))
         {
             std::cout << "No Image.\n";
@@ -38,8 +44,16 @@ bool VideoStreamer::next_frame()
         }
         
         input = img.clone();
-        cv::resize(input, input, input_size, 1., 1., cv::INTER_AREA);
         cv::cvtColor(input, input, cv::COLOR_RGB2GRAY);
+        
+        /* If the size is fixed, adjust it. */
+        if(pImgSize != NULL)
+        {
+            W_scale = (float)img.size().width / (float)pImgSize->width;
+            H_scale = (float)img.size().height / (float)pImgSize->height;
+            cv::resize(input, input, (*pImgSize), 1., 1., cv::INTER_AREA);
+        }
+
         input.convertTo(input, CV_32F);
     }
     else

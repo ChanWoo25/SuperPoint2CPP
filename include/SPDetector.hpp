@@ -69,13 +69,12 @@ private:
      * using the 'nms' member variable.
      */
     void SemiNMS(at::Tensor& kpts);
-    bool nms = true; // SemiNMS() on/off flag.
-                    
-    float conf_thres=0.0625;             /// 각 픽셀의 기댓값: 1/64 = 0.015625
-    float nn_thres;                     ///
-    bool verbose = 0;                   ///
-    
-    
+
+    // SemiNMS() on/off flag.
+    bool nms = true; 
+
+    // 각 픽셀의 기댓값: 1/64 = 0.015625 2배 이상이면 키포인트로 잡음.
+    float mConfThres=0.03125;
 };
 
 }

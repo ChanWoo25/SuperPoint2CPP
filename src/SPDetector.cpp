@@ -73,7 +73,7 @@ void SPDetector::detect(cv::InputArray _image, std::vector<cv::KeyPoint>& _keypo
 
     /* Return a "CUDA bool type Tensor"
      * 1 if there is a featrue, and 0 otherwise */ 
-    at::Tensor kpts = (mProb > conf_thres);  
+    at::Tensor kpts = (mProb > mConfThres);  
     
     /* Remove potential redundent features. */
     if(nms) 
@@ -143,21 +143,21 @@ void SPDetector::SemiNMS(at::Tensor& kpts)
     //auto accessor = kpts.accessor<bool,2>();
     auto pT1 = kpts.data_ptr<bool>();
     auto pT2 = pT1 + collen;
-    auto pT3 = pT2 + collen;
+    // auto pT3 = pT2 + collen;
 
     for(int i = 0; i < rowlen; i++)
     {
         for(int j = 0 ; j < collen; j++)
         {
-            if(*pT1 && (i < rowlen-2) && (j < collen-2))
+            if(*pT1 && (i < rowlen-1) && (j < collen-1))
             {
-                *(pT1 + 1) = 0; *(pT1 + 2) = 0;
-                *pT2 = 0; *(pT2 + 1) = 0; *(pT2 + 2) = 0; 
-                *pT3 = 0; *(pT3 + 1) = 0; *(pT3 + 2) = 0; 
+                *(pT1 + 1) = 0;             // *(pT1 + 2) = 0;
+                *pT2 = 0; *(pT2 + 1) = 0;   // *(pT2 + 2) = 0; 
+                //*pT3 = 0; *(pT3 + 1) = 0; *(pT3 + 2) = 0; 
             }
             pT1++;
             pT2++;
-            pT3++;
+            // pT3++;
         }
     }
 

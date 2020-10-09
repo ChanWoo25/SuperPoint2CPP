@@ -143,9 +143,9 @@ void SuperpointVocCreation(const vector<vector<cv::Mat > > &features)
 {
     // branching factor and depth levels 
     const int k = 10;
-    const int L = 5;
+    const int L = 6;
     const WeightingType weight = TF_IDF;
-    const ScoringType scoring = L2_NORM;
+    const ScoringType scoring = L1_NORM;
 
     SuperpointVocabulary voc(k, L, weight, scoring);
 

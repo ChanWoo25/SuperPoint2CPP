@@ -25,8 +25,7 @@ private:
     int apiID = cv::CAP_ANY;      // 0 = autodetect default API
     int MAX_FRAME_NUM = 1000000;
     int current_frame_num = 0;
-    cv::Size input_size = {640, 480}; // {Width, Height}
-    cv::Size image_size;
+    cv::Size *pImgSize = NULL;
     
 public:
     VideoStreamer(){
@@ -42,7 +41,7 @@ public:
         // When everything done, release the video capture object
         cap.release();
     }
-    VideoStreamer(int cam_id)
+    VideoStreamer(int cam_id):img_source(input_device::IS_CAMERA)
     {
         deviceID = cam_id;
         cap.open(deviceID, apiID);
@@ -50,37 +49,34 @@ public:
             std::cerr << "ERROR! Unable to open camera\n";
             std::exit(1);
         }
-        img_source = input_device::IS_CAMERA;
+
         cv::Mat test_grab;
         while(!cap.read(test_grab));
-        image_size = test_grab.size();
-        W_scale = (float)image_size.width / (float)input_size.width;
-        H_scale = (float)image_size.height / (float)input_size.height;
-        
+        pImgSize = new cv::Size(test_grab.size());
     }
-    VideoStreamer(const cv::String& filename){
+    VideoStreamer(const cv::String& filename):img_source(input_device::IS_VIDEO_FILE)
+    {
         cap.open(filename, apiID);
         if (!cap.isOpened()) {
             std::cerr << "ERROR! Unable to open camera\n";
             std::exit(1);
         }
-        img_source = input_device::IS_VIDEO_FILE;
-        cv::Mat test_grab;
-        while(!cap.read(test_grab));
-        image_size = test_grab.size();
-        W_scale = (float)image_size.width / (float)input_size.width;
-        H_scale = (float)image_size.height / (float)input_size.height;
+
+        // cv::Mat test_grab;
+        // while(!cap.read(test_grab));
+        // image_size = test_grab.size();
+        // W_scale = (float)image_size.width / (float)input_size.width;
+        // H_scale = (float)image_size.height / (float)input_size.height;
     }
     
-    float H_scale, W_scale;
+    float H_scale=1.0, W_scale=1.0;
     cv::Mat img, input;
     cv::Mat read_image(const cv::String& path);
     // Read a image as grayscale and resize to img_size.
 
     bool next_frame();
-    void setImageSize(const cv::Size &sz){ input_size = sz; 
-        W_scale = (float)image_size.width / (float)input_size.width;
-        H_scale = (float)image_size.height / (float)input_size.height;
+    void setImageSize(const cv::Size &_size){ 
+        pImgSize = new cv::Size(_size); 
     }
 };
 
