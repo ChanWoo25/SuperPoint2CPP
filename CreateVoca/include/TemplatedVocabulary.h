@@ -35,8 +35,7 @@ template<class TDescriptor, class F>
 class TemplatedVocabulary
 {		
 public:
-	int MaxIterationPerCluster = 1000;
-	int NumOfWords = 0;
+	int MaxIterationPerCluster = 800;
 
 	/**
 	 * Initiates an empty vocabulary
@@ -734,6 +733,8 @@ void TemplatedVocabulary<TDescriptor,F>::HKmeansStep(NodeId parent_id,
 					{
 							// calculate cluster centres
 							std::cout << "="; cnt++;
+							if(cnt % 100 == 0) cout << cnt << endl;
+							
 							for(unsigned int c = 0; c < clusters.size(); ++c)
 							{
 									std::vector<pDescriptor> cluster_descriptors;
@@ -1004,7 +1005,6 @@ void TemplatedVocabulary<TDescriptor,F>::createWords()
 			{
 				nit->word_id = m_words.size();  // Node.word_id를 
 				m_words.push_back( &(*nit) );
-				NumOfWords++;
 			}
 		}
 	}

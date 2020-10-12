@@ -142,7 +142,6 @@ void SuperpointVocCreation(const vector<vector<cv::Mat>> &features)
     // cout을 이용한 vocabulary 정보 출력 가능.
     cout << "Vocabulary information: " << endl
             << voc << endl << endl;
-    cout << "NumOfWords:" << voc.NumOfWords << endl;
 
     // lets do something with this vocabulary
     // voc를 클래스로 하여 feature정보를 BoWVector Type으로 변환하여 scoring 가능.
@@ -166,7 +165,7 @@ void SuperpointVocCreation(const vector<vector<cv::Mat>> &features)
 
     // save the vocabulary to disk
     cout << endl << "Saving vocabulary..." << endl;
-    voc.saveToTextFile("SPVoc0_Iter1000_Img18000.txt");
+    voc.saveToTextFile("SPVoc1_Iter800_Img12262_Thres_0_0625.txt");
     cout << "Done" << endl;
 }
 
