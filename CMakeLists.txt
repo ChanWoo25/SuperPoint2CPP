@@ -49,15 +49,15 @@ add_subdirectory(CreateVoca)
 # RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
 # )
 
-### Runfile to test new Framework.
-add_executable(Test main.cpp)
-target_compile_features(Test PUBLIC cxx_std_14)
-target_link_libraries(Test PUBLIC 
+### Runfile to test SuperPoint
+add_executable(SuperPoint main_SuperPoint.cpp)
+target_compile_features(SuperPoint PUBLIC cxx_std_14)
+target_link_libraries(SuperPoint PUBLIC 
 Super
-# ${TORCH_LIBRARIES}
-# ${OpenCV_LIBS}
+${TORCH_LIBRARIES}
+${OpenCV_LIBS}
 )
-set_target_properties(Test PROPERTIES
+set_target_properties(SuperPoint PROPERTIES
 RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
 )
 

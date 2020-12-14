@@ -73,8 +73,8 @@ private:
     // SemiNMS() on/off flag.
     bool nms = true; 
 
-    // 각 픽셀의 기댓값: 1/64 = 0.015625 2배 이상이면 키포인트로 잡음.
-    float mConfThres=0.0625;
+    // Interest Point Threshold
+    float mConfThres=0.125;
 };
 
 }
