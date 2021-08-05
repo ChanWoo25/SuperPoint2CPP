@@ -1,5 +1,6 @@
-*build/
-*bin/
-*lib/
+build
+bin
+lib
 SuperPointPretrainedNetwork
 Voca/
+.vscode
