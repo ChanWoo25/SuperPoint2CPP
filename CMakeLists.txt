@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 
 project(
-SuperPointCpp   
+SuperPointCpp
 VERSION         20.08
 LANGUAGES       CXX
 DESCRIPTION     "C++ Implementation of Superpoint."
@@ -39,7 +39,7 @@ add_subdirectory(CreateVoca)
 # ### Deprecated ###
 # add_executable(main main_SuperPoint.cpp)
 # target_compile_features(main PUBLIC cxx_std_14)
-# target_link_libraries(main PUBLIC 
+# target_link_libraries(main PUBLIC
 # superpoint
 # #libzed
 # ${TORCH_LIBRARIES}
@@ -52,7 +52,7 @@ add_subdirectory(CreateVoca)
 ### Runfile to test SuperPoint
 add_executable(SuperPoint main_SuperPoint.cpp)
 target_compile_features(SuperPoint PUBLIC cxx_std_14)
-target_link_libraries(SuperPoint PUBLIC 
+target_link_libraries(SuperPoint PUBLIC
 Super
 ${TORCH_LIBRARIES}
 ${OpenCV_LIBS}
@@ -63,7 +63,7 @@ RUNTIME_OUTPUT_DIRECTORY "${CMAKE_HOME_DIRECTORY}/bin"
 
 ### Runfile to create Vocabulary
 add_executable(CreateVoca main_CreateVoca.cpp)
-target_link_libraries(CreateVoca PUBLIC 
+target_link_libraries(CreateVoca PUBLIC
 Super
 DBoW2
 # ${TORCH_LIBRARIES}

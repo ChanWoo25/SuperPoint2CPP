@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
 
     vector< vector<cv::Mat> > features;
     VideoStreamer vs(DATA_PATH);
-    
+
 
     /** Superpoint Detector **/
     SPDetector SPF(weight_dir, torch::cuda::is_available());
@@ -91,15 +91,15 @@ int main(int argc, char* argv[])
         /* Feature extraction */
         cv::Mat descriptors; // [N_kpts, 256]  Size format:[W, H]
         std::vector<cv::KeyPoint> keypoints;
-        SPF.detect(vs.input, keypoints, descriptors);  
+        SPF.detect(vs.input, keypoints, descriptors);
 
         // Insert descriptors to "featrues".
         int len = keypoints.size();
         for(unsigned i = 0; i < len; i++)
             features[cnt].push_back(descriptors.row(i));
-        
+
         /* Count */
-        n_features += features[cnt].size(); cnt++;  
+        n_features += features[cnt].size(); cnt++;
         cout << descriptors.size().height << ' ';
         if(cnt%10 == 0) cout << endl;
     }
@@ -121,12 +121,12 @@ int main(int argc, char* argv[])
 
 /**
  * @brief create the vocabulary
- * 
+ *
  * @param features loadfeature()를 통해 얻는 features 이중 벡터를 이용.
  */
 void SuperpointVocCreation(const vector<vector<cv::Mat>> &features)
 {
-    // branching factor and depth levels 
+    // branching factor and depth levels
     const int k = 10;
     const int L = 6;
     const WeightingType weight = TF_IDF;
@@ -156,7 +156,7 @@ void SuperpointVocCreation(const vector<vector<cv::Mat>> &features)
     //     for(int j = 0; j < N_IMG; j++)
     //     {
     //         voc.transform(features[j], v2);
-            
+
     //         double score = voc.score(v1, v2);
     //         if(score >= 0.3)
     //             cout << "Image " << i << " vs Image " << j << ": " << score << endl;
@@ -179,13 +179,13 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     // Load the vocabulary from disk
     SuperpointVocabulary voc("SP_voc_v2.yml.gz");
 
-    
-    SuperpointDatabase db(voc, true, 0); 
+
+    SuperpointDatabase db(voc, true, 0);
     // false = do not use direct index
     // (so ignore the last param)
-    // The direct index is useful if we want to retrieve the features that 
+    // The direct index is useful if we want to retrieve the features that
     // belong to some vocabulary node.
-    // db creates a copy of the vocabulary, 
+    // db creates a copy of the vocabulary,
     // we may get rid of "voc" now
 
     // add images to the database
@@ -207,7 +207,7 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     {
         db.query(features[i], ret, 10);
 
-        // ret[0] is always the same image in this case, because we added it to the 
+        // ret[0] is always the same image in this case, because we added it to the
         // database. ret[1] is the second best match.
 
         // QueryResults 타입의 변수도 Cout으로 출력을 지원.
@@ -221,8 +221,8 @@ void TestDatabase(const vector<vector<cv::Mat > > &features)
     cout << "Saving database..." << endl;
     db.save("SP_db_v2.yml.gz");
     cout << "... done!" << endl;
-    
-    // once saved, we can load it again  
+
+    // once saved, we can load it again
     cout << "Retrieving database once again..." << endl;
     SuperpointDatabase db2("SP_db_v2.yml.gz");
     cout << "... done! This is: " << endl << db2 << endl;
